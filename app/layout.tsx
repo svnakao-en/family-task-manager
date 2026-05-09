@@ -15,7 +15,7 @@ export default function RootLayout({ children }: RootLayoutProps): JSX.Element {
   return (
     <html lang="ja">
       <body style={{ margin: 0, padding: 0, fontFamily: 'sans-serif' }}>
-        <RoleGuard>
+        <RoleGuard>  {/* ← 消したなら、もう一度これで囲む */}
           {children}
         </RoleGuard>
       </body>

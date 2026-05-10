@@ -102,14 +102,11 @@ export function taskDataToFirestore(taskData: Partial<TaskData>): Partial<Firest
  */
 export function getStatusColor(status: TaskData['status']): string {
   switch (status) {
-    case 'pending':
-      return '#fff3cd'; // 黄色（未着手）
-    case 'completed':
-      return '#d1ecf1'; // 青（承認待ち）
-    case 'approved':
-      return '#d4edda'; // 緑（承認済み）
-    default:
-      return '#f5f5f5';
+    case 'pending':   return '#fff9e6';
+    case 'working':   return '#e6f0ff'; // 追加：作業中（青系）
+    case 'completed': return '#e6f9f0';
+    case 'approved':  return '#f0f0f0';
+    default:          return '#ffffff';
   }
 }
 
@@ -120,14 +117,11 @@ export function getStatusColor(status: TaskData['status']): string {
  */
 export function getStatusLabel(status: TaskData['status']): string {
   switch (status) {
-    case 'pending':
-      return '未着手';
-    case 'completed':
-      return '承認待ち';
-    case 'approved':
-      return '承認済み';
-    default:
-      return status;
+    case 'pending':   return '未着手';
+    case 'working':   return '作業中'; // 追加
+    case 'completed': return '承認待ち';
+    case 'approved':  return '承認済み';
+    default:          return '不明';
   }
 }
 

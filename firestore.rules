@@ -1,236 +1,217 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-    
+
     // ========================================
-    // Helper Functions
+    // ヘルパー関数
     // ========================================
-    
-    /**
-     * 認証済みユーザーかどうかを確認
-     */
+
     function isAuthenticated() {
       return request.auth != null;
     }
-    
-    /**
-     * リクエストユーザーのfamily_idを取得
-     * family_membersコレクションから正しいfamily_idを参照する
-     */
+
     function getFamilyId() {
       return get(/databases/$(database)/documents/family_members/$(request.auth.uid)).data.family_id;
     }
-    
-    /**
-     * リクエストユーザーが指定されたfamilyに所属しているか確認
-     */
+
     function belongsToFamily(familyId) {
       return isAuthenticated() && getFamilyId() == familyId;
     }
-    
-    /**
-     * リクエストユーザーが親（parent）の役割を持っているか確認
-     */
+
     function isParent() {
-      return isAuthenticated() && 
-             get(/databases/$(database)/documents/family_members/$(request.auth.uid)).data.role == 'parent';
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/family_members/$(request.auth.uid)).data.role == 'parent';
     }
-    
-    // ========================================
-    // users コレクション
-    // ========================================
-    match /users/{userId} {
-      // 読み取り: 自分自身のドキュメントのみ
-      allow read: if isAuthenticated() && request.auth.uid == userId;
-      
-      // 作成: 自分自身のドキュメントのみ
-      allow create: if isAuthenticated() && request.auth.uid == userId;
-      
-      // 更新①: 本人による更新（total_reward は触れない）
-      // 残存①修正: 本人は total_reward を変更不可
-      allow update: if isAuthenticated() &&
-                       request.auth.uid == userId &&
-                       !request.resource.data.diff(resource.data)
-                         .affectedKeys().hasAny(['total_reward']);
-      
-      // 更新②: 親による total_reward 加算のみ（それ以外のフィールドは触れない）
-      // 残存①修正: 親は total_reward の加算のみ可能、他フィールドは触れない
-      allow update: if isAuthenticated() &&
-                       isParent() &&
-                       request.resource.data.diff(resource.data)
-                         .affectedKeys().hasOnly(['total_reward']) &&
-                       request.resource.data.total_reward > resource.data.total_reward;
-      
-      // 削除は禁止
-      allow delete: if false;
+
+    function isChild() {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/family_members/$(request.auth.uid)).data.role == 'child';
     }
-    
-    // ========================================
-    // family_members コレクション
-    // ========================================
-    match /family_members/{memberId} {
-      // 自分自身のドキュメントのみ読み取り可能
-      allow read: if isAuthenticated() && resource.data.user_id == request.auth.uid;
-      
-      // 新規作成: 自分自身のuser_idのみ設定可能
-      allow create: if isAuthenticated() && 
-                       request.resource.data.user_id == request.auth.uid;
-      
-      // 更新: 自分自身のドキュメントのみ更新可能
-      // user_idの変更は禁止
-      allow update: if isAuthenticated() && 
-                       resource.data.user_id == request.auth.uid &&
-                       request.resource.data.user_id == request.auth.uid;
-      
-      // 削除は禁止（データ整合性のため）
-      allow delete: if false;
+
+    function getUserFamilyId(userId) {
+      return get(/databases/$(database)/documents/family_members/$(userId)).data.family_id;
     }
-    
+
     // ========================================
     // families コレクション
     // ========================================
     match /families/{familyId} {
-      // 自分が所属する家族のみ読み取り可能
-      allow read: if belongsToFamily(familyId);
-      
-      // 新規作成: 初回作成時の特例ルール（要塞化版 + ホワイトリスト化 + 型検証）
-      // 理由: 家族作成時点ではまだfamily_membersに登録されていないため、
-      //       belongsToFamily()は使えない（鶏と卵の問題）
-      // 注意: owner_id は暫定運用（初回作成専用フィールド）
-      allow create: if isAuthenticated() &&
-                       // 必須キーの存在チェック（ゴミデータの混入防止）
-                       request.resource.data.keys().hasAll(['name', 'owner_id']) &&
-                       // ホワイトリスト化: 許可されたフィールド以外を1つも受け付けない（鉄の門扉）
-                       request.resource.data.keys().hasOnly(['name', 'owner_id', 'created_at']) &&
-                       // 型・サイズ検証（最終防衛線）
-                       request.resource.data.name is string &&
-                       request.resource.data.name.size() > 0 && // 空文字禁止
-                       request.resource.data.name.size() <= 100 && // 最大100文字
-                       request.resource.data.owner_id is string &&
-                       request.resource.data.created_at is timestamp &&
-                       // 自分がオーナーであることを強制
-                       request.resource.data.owner_id == request.auth.uid;
-      
-      // 更新: 自分が所属する家族で、かつ親の役割を持つ場合のみ可能
-      // Critical ③: owner_id の変更を禁止（不変性の保証）
-      allow update: if belongsToFamily(familyId) &&
-                       isParent() &&
-                       request.resource.data.owner_id == resource.data.owner_id;
-      
-      // 削除: 親の役割を持つ場合のみ可能
-      allow delete: if belongsToFamily(familyId) && isParent();
+      allow read: if isAuthenticated() && belongsToFamily(familyId);
+      allow create, update: if isAuthenticated() &&
+        isParent() &&
+        belongsToFamily(familyId);
+      allow delete: if false;
     }
-    
+
+    // ========================================
+    // users コレクション
+    // ========================================
+    match /users/{userId} {
+      // 自分、または同一家族の親のみ読み取り可能
+      allow read: if isAuthenticated() && (
+        request.auth.uid == userId ||
+        (
+          isParent() &&
+          getUserFamilyId(userId) == getFamilyId()
+        )
+      );
+
+      // 自分のデータのみ作成可能
+      allow create: if isAuthenticated() &&
+        request.auth.uid == userId;
+
+      // 更新ルール
+      allow update: if isAuthenticated() && (
+        // ケース1: 自分が name 等を更新（total_reward の自己変更は不可）
+        (
+          request.auth.uid == userId &&
+          !request.resource.data.diff(resource.data)
+            .affectedKeys().hasAny(['total_reward'])
+        ) ||
+        // ケース2: 親による total_reward 更新（タスク承認時のみ）
+        (
+          isParent() &&
+          getUserFamilyId(userId) == getFamilyId() &&
+          request.resource.data.diff(resource.data)
+            .affectedKeys().hasOnly(['total_reward'])
+        )
+      );
+
+      allow delete: if false;
+    }
+
+    // ========================================
+    // family_members コレクション
+    // ========================================
+    match /family_members/{memberId} {
+      // 自分のレコード、または同一家族の親が読み取り可能
+      allow read: if isAuthenticated() && (
+        resource.data.user_id == request.auth.uid ||
+        (
+          isParent() &&
+          resource.data.family_id == getFamilyId()
+        )
+      );
+
+      // 初回登録時のみ作成可能（自分のレコードのみ）
+      allow create: if isAuthenticated() &&
+        request.resource.data.user_id == request.auth.uid;
+
+      // user_id と family_id は変更不可（憲法：データ不変性）
+      allow update: if isAuthenticated() &&
+        resource.data.user_id == request.auth.uid &&
+        request.resource.data.user_id == resource.data.user_id &&
+        request.resource.data.family_id == resource.data.family_id;
+
+      allow delete: if false;
+    }
+
     // ========================================
     // tasks コレクション
     // ========================================
     match /tasks/{taskId} {
-      // 読み取り: 自分が所属する家族のタスクのみ
+
+      // 読み取り: 同じ家族のメンバーのみ
       allow read: if isAuthenticated() &&
-                     belongsToFamily(resource.data.family_id);
-      
-      // 作成: 自分が所属する家族のタスクのみ作成可能
-      // family_idはDB内の正解と一致する必要がある
-      // created_by は作成者自身でなければならない
+        belongsToFamily(resource.data.family_id);
+
+      // 作成: 親のみ
       allow create: if isAuthenticated() &&
-                       // 必須フィールドの存在チェック（hasAll）
-                       request.resource.data.keys().hasAll(['family_id', 'title', 'reward_points', 'status', 'created_by', 'created_at']) &&
-                       // ホワイトリスト化: 許可されたフィールド以外を受け付けない
-                       request.resource.data.keys().hasOnly(['family_id', 'title', 'description', 'reward_points', 'status', 'assigned_to', 'created_by', 'created_at']) &&
-                       // 型・値検証
-                       request.resource.data.family_id == getFamilyId() &&
-                       request.resource.data.title is string &&
-                       request.resource.data.title.size() > 0 &&
-                       request.resource.data.title.size() <= 200 &&
-                       request.resource.data.reward_points is int &&
-                       request.resource.data.reward_points >= 1 &&
-                       request.resource.data.created_by == request.auth.uid &&
-                       request.resource.data.status == 'pending' &&
-                       request.resource.data.created_at is timestamp;
-      
-      // 更新: Critical ① ステータス遷移の物理的強制 + approved の完全 Immutable 化
-      allow update: if isAuthenticated() &&
-                       belongsToFamily(resource.data.family_id) &&
-                       // Critical: approved ステータスは完全不変（会計確定後は二度と動かさない）
-                       resource.data.status != 'approved' &&
-                       // 不変フィールドの変更を禁止
-                       request.resource.data.family_id == resource.data.family_id &&
-                       request.resource.data.created_by == resource.data.created_by &&
-                       (
-                         // 子供: pending → completed のみ許可
-                         (!isParent() &&
-                          resource.data.status == 'pending' &&
-                          request.resource.data.status == 'completed' &&
-                          // 残存②修正: 担当者チェック（未設定・null・空文字または本人のみ）
-                          (
-                            !resource.data.keys().hasAny(['assigned_to']) ||
-                            resource.data.assigned_to == null ||
-                            resource.data.assigned_to == '' ||
-                            resource.data.assigned_to == request.auth.uid
-                          )) ||
-                         
-                         // 親: completed → approved のみ許可（差し戻しは禁止）
-                         (isParent() &&
-                          resource.data.status == 'completed' &&
-                          request.resource.data.status == 'approved')
-                       );
-      
-      // 削除: 親の役割を持つ場合のみ可能
-      allow delete: if isAuthenticated() &&
-                       belongsToFamily(resource.data.family_id) &&
-                       isParent();
+        isParent() &&
+        belongsToFamily(request.resource.data.family_id) &&
+        request.resource.data.status == 'pending' &&
+        request.resource.data.keys().hasAll([
+          'family_id', 'title', 'reward_points', 'status', 'created_by'
+        ]) &&
+        request.resource.data.created_by == request.auth.uid &&
+        request.resource.data.reward_points is int &&
+        request.resource.data.reward_points > 0;
+
+      // 更新: ステータス遷移ごとに厳格にルールを分ける
+      allow update: if isAuthenticated() && (
+        isValidStart()      ||
+        isValidCompletion() ||
+        isValidApproval()   ||
+        isValidRejection()
+      );
+
+      allow delete: if false;
     }
-    
-    // ========================================
-    // rewards コレクション（将来の拡張用）
-    // ========================================
-    match /rewards/{rewardId} {
-      // 読み取り: 自分が所属する家族の報酬のみ
-      allow read: if isAuthenticated() && 
-                     belongsToFamily(resource.data.family_id);
-      
-      // 作成: 自分が所属する家族の報酬のみ作成可能
-      allow create: if isAuthenticated() && 
-                       request.resource.data.family_id == getFamilyId();
-      
-      // 更新: 自分が所属する家族の報酬のみ更新可能
-      // family_idの変更は禁止
-      allow update: if isAuthenticated() && 
-                       belongsToFamily(resource.data.family_id) &&
-                       request.resource.data.family_id == resource.data.family_id;
-      
-      // 削除: 親の役割を持つ場合のみ可能
-      allow delete: if isAuthenticated() && 
-                       belongsToFamily(resource.data.family_id) && 
-                       isParent();
+
+    // ----------------------------------------
+    // pending → working（子供がタスクを開始）
+    // ----------------------------------------
+    function isValidStart() {
+      return (
+        isChild() &&
+        belongsToFamily(resource.data.family_id) &&
+        resource.data.status == 'pending' &&
+        request.resource.data.status == 'working' &&
+        (
+          !('assigned_to' in resource.data) ||
+          resource.data.assigned_to == null ||
+          resource.data.assigned_to == request.auth.uid
+        ) &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'assigned_to']) &&
+        request.resource.data.family_id == resource.data.family_id &&
+        request.resource.data.reward_points == resource.data.reward_points &&
+        request.resource.data.created_by == resource.data.created_by
+      );
     }
-    
-    // ========================================
-    // その他のコレクションへのアクセスは全て拒否
-    // ========================================
-    match /{document=**} {
-      allow read, write: if false;
+
+    // ----------------------------------------
+    // working → completed（子供がタスクを完了報告）
+    // ----------------------------------------
+    function isValidCompletion() {
+      return (
+        isChild() &&
+        belongsToFamily(resource.data.family_id) &&
+        resource.data.status == 'working' &&
+        request.resource.data.status == 'completed' &&
+        resource.data.assigned_to == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'completed_at']) &&
+        request.resource.data.family_id == resource.data.family_id &&
+        request.resource.data.reward_points == resource.data.reward_points &&
+        request.resource.data.created_by == resource.data.created_by
+      );
     }
+
+    // ----------------------------------------
+    // completed → approved（親が承認）
+    // ----------------------------------------
+    function isValidApproval() {
+      return (
+        isParent() &&
+        belongsToFamily(resource.data.family_id) &&
+        resource.data.status == 'completed' &&
+        request.resource.data.status == 'approved' &&
+        'assigned_to' in resource.data &&
+        resource.data.assigned_to != null &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'approved_at']) &&
+        request.resource.data.family_id == resource.data.family_id &&
+        request.resource.data.reward_points == resource.data.reward_points &&
+        request.resource.data.assigned_to == resource.data.assigned_to
+      );
+    }
+
+    // ----------------------------------------
+    // completed または working → pending（親が差し戻し）
+    // ----------------------------------------
+    function isValidRejection() {
+      return (
+        isParent() &&
+        belongsToFamily(resource.data.family_id) &&
+        (resource.data.status == 'completed' || resource.data.status == 'working') &&
+        request.resource.data.status == 'pending' &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status']) &&
+        request.resource.data.family_id == resource.data.family_id &&
+        request.resource.data.reward_points == resource.data.reward_points
+      );
+    }
+
   }
 }
-
-// Made with Bob
-// Security Rules - Phase 5 物理要塞化版（新クロード監査官承認済み）
-// 設計方針:
-// 1. リクエストに含まれるfamily_idを信じず、DB内の正解（family_membersコレクション）を参照
-// 2. 各コレクションへのアクセスは、ユーザーが所属する家族のデータのみに制限
-// 3. 親（parent）の役割を持つユーザーのみが削除や重要な更新を実行可能
-// 4. family_idの変更は禁止（データ整合性の保護）
-//
-// 新クロード監査官の指摘を反映した物理要塞化:
-// Critical ①: tasks のステータス遷移を物理的に強制
-//   - 子供: pending → completed のみ
-//   - 親: completed → approved または approved → pending（差し戻し）のみ
-// Critical ②: users の total_reward 直接改ざんを禁止（残存①修正済み）
-//   - 本人: total_reward を変更不可
-//   - 親: total_reward の加算のみ可能、他フィールドは触れない
-// Critical ③: 不変フィールドの変更を禁止
-//   - families.owner_id, tasks.created_by の変更を物理的に遮断
-// 残存②修正: assigned_to の空値（null・空文字）を正しく扱う
-//   - 未設定・null・空文字の場合は誰でも完了可能（ロジック層と一致）

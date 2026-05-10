@@ -234,4 +234,105 @@ export async function completeTask(
   }
 }
 
+/**
+ * タスクを作業中にする（子供が使用）
+ * pending → working への遷移
+ */
+export async function startTask(
+  taskId: string,
+  currentUser: UserData
+): Promise<void> {
+  // ガード0: 子供のみ
+  if (currentUser.role !== 'child') {
+    throw new Error('タスクの開始は子供のみが実行できます');
+  }
+  if (!currentUser.familyId) {
+    throw new Error('家族IDが設定されていません');
+  }
+
+  const taskRef = doc(db, 'tasks', taskId);
+  const taskSnap = await getDoc(taskRef);
+
+  if (!taskSnap.exists()) {
+    throw new Error('タスクが存在しません');
+  }
+
+  let task: TaskData;
+  try {
+    task = buildTaskData(taskSnap.data(), taskSnap.id);
+  } catch {
+    throw new Error('タスクデータの変換に失敗しました');
+  }
+
+  if (task.familyId !== currentUser.familyId) {
+    throw new Error('権限がありません');
+  }
+
+  // pending のみ開始可能
+  if (task.status !== 'pending') {
+    throw new Error('開始可能な状態ではありません');
+  }
+
+  // 担当者が設定済みの場合は本人のみ
+  if (task.assignedTo && task.assignedTo !== currentUser.userId) {
+    throw new Error('このタスクは他の人に割り当てられています');
+  }
+
+  const batch = writeBatch(db);
+  batch.update(taskRef, {
+    status: 'working',
+    // 担当者未設定の場合は自動設定
+    ...(task.assignedTo ? {} : { assigned_to: currentUser.userId }),
+  });
+
+  await batch.commit();
+}
+
+/**
+ * タスクを差し戻す（親が使用）
+ * completed または working → pending への遷移
+ */
+export async function rejectTask(
+  taskId: string,
+  currentUser: UserData
+): Promise<void> {
+  // ガード0: 親のみ
+  if (currentUser.role !== 'parent') {
+    throw new Error('差し戻しは親のみが実行できます');
+  }
+  if (!currentUser.familyId) {
+    throw new Error('家族IDが設定されていません');
+  }
+
+  const taskRef = doc(db, 'tasks', taskId);
+  const taskSnap = await getDoc(taskRef);
+
+  if (!taskSnap.exists()) {
+    throw new Error('タスクが存在しません');
+  }
+
+  let task: TaskData;
+  try {
+    task = buildTaskData(taskSnap.data(), taskSnap.id);
+  } catch {
+    throw new Error('タスクデータの変換に失敗しました');
+  }
+
+  if (task.familyId !== currentUser.familyId) {
+    throw new Error('権限がありません');
+  }
+
+  // completed または working のみ差し戻し可能
+  if (task.status !== 'completed' && task.status !== 'working') {
+    throw new Error('差し戻し可能な状態ではありません');
+  }
+
+  const batch = writeBatch(db);
+  batch.update(taskRef, {
+    status: 'pending',
+  });
+
+  await batch.commit();
+}
+
 // Made with Bob

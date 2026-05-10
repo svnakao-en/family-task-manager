@@ -61,7 +61,7 @@ export interface TaskData {
   title: string;
   description?: string;
   rewardPoints: number;
-  status: 'pending' | 'completed' | 'approved';
+  status: 'pending' | 'working' | 'completed' | 'approved'; // working 追加
   assignedTo?: string;
   createdBy: string;
   createdAt: Date;
@@ -78,7 +78,7 @@ export interface FirestoreTaskDocument {
   title: string;
   description?: string;
   reward_points: number;
-  status: 'pending' | 'completed' | 'approved';
+  status: 'pending' | 'working' | 'completed' | 'approved'; // working 追加
   assigned_to?: string;
   created_by: string;
   created_at: any; // Firestore Timestamp

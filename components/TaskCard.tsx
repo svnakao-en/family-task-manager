@@ -3,6 +3,8 @@
 import { TaskData, UserData } from '@/types';
 import { ApproveButton } from './ApproveButton';
 import { CompleteButton } from './CompleteButton';
+import { StartButton } from './StartButton';
+import { RejectButton } from './RejectButton';
 import { getStatusColor, getStatusLabel, formatDate } from '@/lib/taskUtils';
 
 interface TaskCardProps {
@@ -49,7 +51,7 @@ export function TaskCard({
         </span>
       </div>
 
-      {/* 説明（存在する場合） */}
+      {/* 説明 */}
       {task.description && (
         <p style={{ margin: '8px 0', fontSize: '14px', color: '#555' }}>
           {task.description}
@@ -76,7 +78,26 @@ export function TaskCard({
       </div>
 
       {/* アクションボタン */}
-      <div style={{ display: 'flex', gap: '8px' }}>
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+        {/* 子: はじめるボタン（pending のみ） */}
+        <StartButton
+          taskId={task.taskId}
+          taskStatus={task.status}
+          assignedTo={task.assignedTo}
+          currentUser={currentUser}
+          onSuccess={onTaskUpdate}
+          onError={onError}
+        />
+        {/* 子: 完了ボタン（working のみ） */}
+        <CompleteButton
+          taskId={task.taskId}
+          taskStatus={task.status}
+          assignedTo={task.assignedTo}
+          currentUser={currentUser}
+          onSuccess={onTaskUpdate}
+          onError={onError}
+        />
+        {/* 親: 承認ボタン（completed のみ） */}
         <ApproveButton
           taskId={task.taskId}
           taskStatus={task.status}
@@ -86,10 +107,10 @@ export function TaskCard({
           onSuccess={onTaskUpdate}
           onError={onError}
         />
-        <CompleteButton
+        {/* 親: 差し戻しボタン（completed または working） */}
+        <RejectButton
           taskId={task.taskId}
           taskStatus={task.status}
-          assignedTo={task.assignedTo}
           currentUser={currentUser}
           onSuccess={onTaskUpdate}
           onError={onError}

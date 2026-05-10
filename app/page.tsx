@@ -36,7 +36,12 @@ export default function Home() {
         <TaskList 
           currentUser={user} 
           renderTask={(task) => (
-            <TaskCard key={task.id} task={task} currentUser={user} />
+            <TaskCard 
+              key={task.id} 
+              task={task} 
+              currentUser={user} 
+              onTaskUpdate={() => {}} // ← これを追加！「今は何もしない」という命令です
+            />
           )} 
         />
       </div>

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import LoginForm from '@/components/LoginForm';
 import { TaskList } from '@/components/TaskList'; 
-import { TaskCard } from '@/components/TaskCard'; // 表示用の部品も追加
+import { TaskCard } from '@/components/TaskCard';
 
 export default function Home() {
   const { user, loading } = useAuth();
@@ -30,24 +30,22 @@ export default function Home() {
       </header>
 
       <div>
-        <h2 style={{ fontSize: '20px', marginBottom: '15px' }}>お手伝いミッション</h2>
-        
-        {/* ボブの要求通り、currentUser と renderTask を渡します */}
+        {/* ボブのTaskListPropsに100%準拠させた形 */}
         <TaskList 
           currentUser={user} 
           renderTask={(task) => (
             <TaskCard 
-              key={task.id} 
+              key={task.taskId} // task.id ではなく task.taskId に修正！
               task={task} 
               currentUser={user} 
-              onTaskUpdate={() => {}} // ← これを追加！「今は何もしない」という命令です
+              onTaskUpdate={() => {}} // リアルタイム同期なので空でOK！
             />
           )} 
         />
       </div>
 
       <footer style={{ marginTop: '40px', fontSize: '12px', color: '#ccc' }}>
-        Family Reward App - Managed by Director
+        Family Reward App - Powered by Bob's Iron Rules
       </footer>
     </main>
   );

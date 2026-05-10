@@ -4,14 +4,14 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import LoginForm from '@/components/LoginForm';
-import { TaskList } from '@/components/TaskList';
+import { TaskList } from '@/components/TaskList'; 
+import { TaskCard } from '@/components/TaskCard'; // 表示用の部品も追加
 
 export default function Home() {
   const { user, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    // 役割が決まっていない場合は役割選択へ誘導
     if (!loading && user && (!user.role || user.role === 'unknown')) {
       router.push('/auth/role-selection');
     }
@@ -22,7 +22,6 @@ export default function Home() {
 
   return (
     <main style={{ padding: '20px', maxWidth: '800px', margin: '0 auto', fontFamily: 'sans-serif' }}>
-      {/* 簡易ヘッダー */}
       <header style={{ borderBottom: '2px solid #eee', paddingBottom: '10px', marginBottom: '20px' }}>
         <h1 style={{ fontSize: '24px' }}>
           {user.role === 'parent' ? '👨‍👩‍👧‍👦 パパ・ママ用管理画面' : '👦 こども用お手伝い画面'}
@@ -30,10 +29,16 @@ export default function Home() {
         <p style={{ color: '#666' }}>ログイン中: {user.email}</p>
       </header>
 
-      {/* メインコンテンツ：タスク一覧 */}
       <div>
         <h2 style={{ fontSize: '20px', marginBottom: '15px' }}>お手伝いミッション</h2>
-        <TaskList />
+        
+        {/* ボブの要求通り、currentUser と renderTask を渡します */}
+        <TaskList 
+          currentUser={user} 
+          renderTask={(task) => (
+            <TaskCard key={task.id} task={task} currentUser={user} />
+          )} 
+        />
       </div>
 
       <footer style={{ marginTop: '40px', fontSize: '12px', color: '#ccc' }}>

@@ -33,6 +33,11 @@ export default function HistoryPage() {
     if (loading || !user || !user.familyId) return;
 
     const fetchHistory = async () => {
+        // 一時的なデバッグログ
+        console.log('user.familyId:', user.familyId);
+        console.log('user.userId:', user.userId);
+        console.log('user.role:', user.role);  
+        
       setIsFetching(true);
       setError(null);
 

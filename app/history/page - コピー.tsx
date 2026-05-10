@@ -20,10 +20,9 @@ export default function HistoryPage() {
   const [tasks, setTasks] = useState<TaskData[]>([]);
   const [isFetching, setIsFetching] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  // 変更点①: ユーザーIDと名前のMapを管理するステートを追加
-  const [userNameMap, setUserNameMap] = useState<Map<string, string>>(new Map());
 
   useEffect(() => {
+    // 未ログイン時はトップへ（RoleGuardの補完）
     if (!loading && !user) {
       router.push('/');
     }
@@ -37,11 +36,11 @@ export default function HistoryPage() {
       setError(null);
 
       try {
-        // 変更点②: タスク取得と並行してユーザー一覧を取得（逐次ではなく並列）
         const tasksRef = collection(db, 'tasks');
-        const usersRef = collection(db, 'users');
 
-        const taskQuery = user.role === 'parent'
+        // 親: 家族全員の承認済みタスク
+        // 子: 自分が担当した承認済みタスクのみ
+        const q = user.role === 'parent'
           ? query(
               tasksRef,
               where('family_id', '==', user.familyId),
@@ -56,45 +55,13 @@ export default function HistoryPage() {
               orderBy('approved_at', 'desc')
             );
 
-        // family_members経由で同じ家族のuser_idリストを取得し、
-        // usersコレクションを引く（JOIN禁止・2クエリで結合）
-        const membersQuery = query(
-          collection(db, 'family_members'),
-          where('family_id', '==', user.familyId)
-        );
+        const snapshot = await getDocs(q);
 
-        // 並列取得（読み取り効率優先）
-        const [taskSnapshot, membersSnapshot] = await Promise.all([
-          getDocs(taskQuery),
-          getDocs(membersQuery),
-        ]);
-
-        // family_membersからuserIdリストを抽出
-        const userIds = membersSnapshot.docs.map(
-          (doc) => doc.data().user_id as string
-        );
-
-        // usersコレクションからまとめて取得
-        // Firestoreの`in`クエリは最大10件まで（MVP規模では問題なし）
-        const usersQuery = query(
-          usersRef,
-          where('__name__', 'in', userIds)
-        );
-        const usersSnapshot = await getDocs(usersQuery);
-
-        // 変更点③: IDと名前のMapを構築
-        const nameMap = new Map<string, string>();
-        usersSnapshot.docs.forEach((doc) => {
-          nameMap.set(doc.id, doc.data().name as string);
-        });
-        setUserNameMap(nameMap);
-
-        // タスクデータを変換
-        const historyTasks: TaskData[] = taskSnapshot.docs.map((doc) =>
+        const historyTasks: TaskData[] = snapshot.docs.map((doc) =>
           buildTaskData(doc.data(), doc.id)
         );
-        setTasks(historyTasks);
 
+        setTasks(historyTasks);
       } catch (err) {
         console.error('履歴取得エラー:', err);
         setError('履歴の取得に失敗しました。再読み込みしてください。');
@@ -106,6 +73,7 @@ export default function HistoryPage() {
     fetchHistory();
   }, [user, loading]);
 
+  // ローディング中
   if (loading || isFetching) {
     return (
       <div style={{ padding: '50px', textAlign: 'center', color: '#666' }}>
@@ -114,6 +82,7 @@ export default function HistoryPage() {
     );
   }
 
+  // 未ログイン（リダイレクト待ち）
   if (!user) return null;
 
   return (
@@ -124,6 +93,7 @@ export default function HistoryPage() {
       fontFamily: 'sans-serif',
       color: '#333',
     }}>
+      {/* ヘッダー */}
       <header style={{
         borderBottom: '2px solid #eee',
         paddingBottom: '20px',
@@ -152,6 +122,7 @@ export default function HistoryPage() {
         </p>
       </header>
 
+      {/* エラー表示 */}
       {error && (
         <div style={{
           padding: '12px 16px',
@@ -165,6 +136,7 @@ export default function HistoryPage() {
         </div>
       )}
 
+      {/* 履歴一覧 */}
       {tasks.length === 0 ? (
         <div style={{
           textAlign: 'center',
@@ -194,6 +166,7 @@ export default function HistoryPage() {
                 gap: '8px',
               }}
             >
+              {/* タスク情報 */}
               <div>
                 <p style={{ margin: '0 0 4px 0', fontWeight: 'bold', fontSize: '16px' }}>
                   {task.title}
@@ -203,14 +176,15 @@ export default function HistoryPage() {
                     ? task.approvedAt.toLocaleDateString('ja-JP')
                     : '不明'}
                 </p>
-                {/* 変更点③: IDではなく名前を表示。Mapに存在しない場合はIDにフォールバック */}
+                {/* 親のみ担当者を表示 */}
                 {user.role === 'parent' && task.assignedTo && (
                   <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#999' }}>
-                    担当: {userNameMap.get(task.assignedTo) ?? task.assignedTo}
+                    担当: {task.assignedTo}
                   </p>
                 )}
               </div>
 
+              {/* 報酬ポイント */}
               <div style={{
                 padding: '6px 14px',
                 backgroundColor: '#d4edda',
@@ -227,6 +201,7 @@ export default function HistoryPage() {
         </ul>
       )}
 
+      {/* 合計ポイント（子のみ） */}
       {user.role === 'child' && tasks.length > 0 && (
         <div style={{
           marginTop: '24px',

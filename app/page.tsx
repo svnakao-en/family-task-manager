@@ -1,24 +1,35 @@
 "use client";
 
-import LoginForm from '@/components/LoginForm';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import Link from 'next/link'; // Linkをインポート
+import LoginForm from '@/components/LoginForm';
+// ボブが作ったメインのコンポーネントたち（名前が違う場合は適宜調整します）
+import TaskList from '@/components/TaskList'; 
+import FamilyHeader from '@/components/FamilyHeader';
 
 export default function Home() {
   const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    // ログイン済みだが役割がまだの場合は、役割選択へ飛ばす
+    if (!loading && user && (!user.role || user.role === 'unknown')) {
+      router.push('/auth/role-selection');
+    }
+  }, [user, loading, router]);
 
   if (loading) return <div style={{ padding: '50px' }}>読み込み中...</div>;
-  
   if (!user) return <LoginForm />;
 
-  // 自動転送(useEffect)を一旦消すか、以下の画面を表示するようにします
+  // 役割が決まっている場合、メインのアプリ画面を表示
   return (
-    <div style={{ padding: '50px' }}>
-      <h1>ログイン成功！</h1>
-      <p>こんにちは、{user.email}さん</p>
-      <Link href="/auth/role-selection" style={{ color: 'blue', textDecoration: 'underline' }}>
-        👉 役割選択ページへ進む
-      </Link>
-    </div>
+    <main style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
+      <FamilyHeader user={user} />
+      <div style={{ marginTop: '30px' }}>
+        <h2>お手伝いミッション</h2>
+        <TaskList user={user} />
+      </div>
+    </main>
   );
 }

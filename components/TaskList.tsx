@@ -29,6 +29,7 @@ export function TaskList({
   currentUser,
   onError,
   renderTask,
+  onTasksLoaded, // ← これを追加！
 }: TaskListProps): JSX.Element {
   const [tasks, setTasks] = useState<TaskData[]>([]);
   const [isLoading, setIsLoading] = useState(true);

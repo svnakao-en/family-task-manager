@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import LoginForm from '@/components/LoginForm';
 import { TaskList } from '@/components/TaskList'; 
 import { TaskCard } from '@/components/TaskCard';
-import { TaskForm } from '@/components/TaskForm'; // ← 追加！
+import { TaskForm } from '@/components/TaskForm'; // ボブの指定通り名前付きインポート
 
 export default function Home() {
   const { user, loading } = useAuth();
@@ -30,15 +30,15 @@ export default function Home() {
         <p style={{ color: '#666' }}>ログイン中: {user.email}</p>
       </header>
 
-      {/* 親だけがタスクを作れるようにします */}
+      {/* 1. タスク投稿フォーム（親だけに見える） */}
       {user.role === 'parent' && (
-        <section style={{ marginBottom: '30px', backgroundColor: '#f9f9f9', padding: '20px', borderRadius: '10px' }}>
-          <h2 style={{ fontSize: '18px', marginTop: 0 }}>🆕 新しいお手伝いを頼む</h2>
-          <TaskForm />
+        <section style={{ marginBottom: '30px' }}>
+          <TaskForm currentUser={user} />
         </section>
       )}
 
-      <div>
+      {/* 2. タスク一覧（リアルタイム同期） */}
+      <section>
         <TaskList 
           currentUser={user} 
           renderTask={(task: any) => (
@@ -50,10 +50,10 @@ export default function Home() {
             />
           )} 
         />
-      </div>
+      </section>
 
-      <footer style={{ marginTop: '40px', fontSize: '12px', color: '#ccc' }}>
-        Family Reward App - Mission Ready!
+      <footer style={{ marginTop: '40px', fontSize: '12px', color: '#ccc', textAlign: 'center' }}>
+        Family Reward App - Approved by Director & Bob
       </footer>
     </main>
   );

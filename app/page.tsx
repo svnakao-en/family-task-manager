@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import LoginForm from '@/components/LoginForm';
-import TaskList from '@/components/TaskList'; // これは存在するのでOK
+import { TaskList } from '@/components/TaskList';
 
 export default function Home() {
   const { user, loading } = useAuth();

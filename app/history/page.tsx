@@ -20,7 +20,6 @@ export default function HistoryPage() {
   const [tasks, setTasks] = useState<TaskData[]>([]);
   const [isFetching, setIsFetching] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  // 変更点①: ユーザーIDと名前のMapを管理するステートを追加
   const [userNameMap, setUserNameMap] = useState<Map<string, string>>(new Map());
 
   useEffect(() => {
@@ -33,18 +32,11 @@ export default function HistoryPage() {
     if (loading || !user || !user.familyId) return;
 
     const fetchHistory = async () => {
-        // 一時的なデバッグログ
-        console.log('user.familyId:', user.familyId);
-        console.log('user.userId:', user.userId);
-        console.log('user.role:', user.role);  
-        
       setIsFetching(true);
       setError(null);
 
       try {
-        // 変更点②: タスク取得と並行してユーザー一覧を取得（逐次ではなく並列）
         const tasksRef = collection(db, 'tasks');
-        const usersRef = collection(db, 'users');
 
         const taskQuery = user.role === 'parent'
           ? query(
@@ -61,47 +53,56 @@ export default function HistoryPage() {
               orderBy('approved_at', 'desc')
             );
 
-        // family_members経由で同じ家族のuser_idリストを取得し、
-        // usersコレクションを引く（JOIN禁止・2クエリで結合）
-        const membersQuery = query(
-          collection(db, 'family_members'),
-          where('family_id', '==', user.familyId)
-        );
+        // 親の場合のみメンバー一覧を取得（子どもは自分のレコードしか読めないため）
+        if (user.role === 'parent') {
+          const membersQuery = query(
+            collection(db, 'family_members'),
+            where('family_id', '==', user.familyId)
+          );
 
-        // 並列取得（読み取り効率優先）
-        const [taskSnapshot, membersSnapshot] = await Promise.all([
-          getDocs(taskQuery),
-          getDocs(membersQuery),
-        ]);
+          const [taskSnapshot, membersSnapshot] = await Promise.all([
+            getDocs(taskQuery),
+            getDocs(membersQuery),
+          ]);
 
-        // family_membersからuserIdリストを抽出
-        const userIds = membersSnapshot.docs.map(
-          (doc) => doc.data().user_id as string
-        );
+          const userIds = membersSnapshot.docs.map(
+            (doc) => doc.data().user_id as string
+          );
 
-        // usersコレクションからまとめて取得
-        // Firestoreの`in`クエリは最大10件まで（MVP規模では問題なし）
-        const usersQuery = query(
-          usersRef,
-          where('__name__', 'in', userIds)
-        );
-        const usersSnapshot = await getDocs(usersQuery);
+          if (userIds.length > 0) {
+            const usersSnapshot = await getDocs(
+              query(
+                collection(db, 'users'),
+                where('__name__', 'in', userIds)
+              )
+            );
 
-        // 変更点③: IDと名前のMapを構築
-        const nameMap = new Map<string, string>();
-        usersSnapshot.docs.forEach((doc) => {
-          nameMap.set(doc.id, doc.data().name as string);
-        });
-        setUserNameMap(nameMap);
+            const nameMap = new Map<string, string>();
+            usersSnapshot.docs.forEach((doc) => {
+              nameMap.set(doc.id, doc.data().name as string);
+            });
+            setUserNameMap(nameMap);
+          }
 
-        // タスクデータを変換
-        const historyTasks: TaskData[] = taskSnapshot.docs.map((doc) =>
-          buildTaskData(doc.data(), doc.id)
-        );
-        setTasks(historyTasks);
+          const historyTasks: TaskData[] = taskSnapshot.docs.map((doc) =>
+            buildTaskData(doc.data(), doc.id)
+          );
+          setTasks(historyTasks);
+
+        } else {
+          // 子どもの場合: タスクのみ取得（メンバー一覧は不要）
+          const taskSnapshot = await getDocs(taskQuery);
+          const historyTasks: TaskData[] = taskSnapshot.docs.map((doc) =>
+            buildTaskData(doc.data(), doc.id)
+          );
+          setTasks(historyTasks);
+        }
 
       } catch (err) {
         console.error('履歴取得エラー:', err);
+        if (err instanceof Error) {
+          console.error('エラーコード:', (err as any).code);
+        }
         setError('履歴の取得に失敗しました。再読み込みしてください。');
       } finally {
         setIsFetching(false);
@@ -208,7 +209,6 @@ export default function HistoryPage() {
                     ? task.approvedAt.toLocaleDateString('ja-JP')
                     : '不明'}
                 </p>
-                {/* 変更点③: IDではなく名前を表示。Mapに存在しない場合はIDにフォールバック */}
                 {user.role === 'parent' && task.assignedTo && (
                   <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#999' }}>
                     担当: {userNameMap.get(task.assignedTo) ?? task.assignedTo}

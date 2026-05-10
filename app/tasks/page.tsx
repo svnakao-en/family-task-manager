@@ -15,27 +15,34 @@ export default function TaskPage() {
   const { showToast, ToastContainer } = useToast();
   const [userNameMap, setUserNameMap] = useState<Map<string, string>>(new Map());
 
-  // 家族メンバーの名前Mapを取得
   useEffect(() => {
     if (loading || !user || !user.familyId) return;
 
     const fetchUserNames = async () => {
       try {
-        const membersSnapshot = await getDocs(
-          query(collection(db, 'family_members'), where('family_id', '==', user.familyId))
-        );
-        const userIds = membersSnapshot.docs.map((doc) => doc.data().user_id as string);
-        if (userIds.length === 0) return;
+        if (user.role === 'parent') {
+          // 親の場合: 家族全員の名前を取得
+          const membersSnapshot = await getDocs(
+            query(collection(db, 'family_members'), where('family_id', '==', user.familyId))
+          );
+          const userIds = membersSnapshot.docs.map((doc) => doc.data().user_id as string);
+          if (userIds.length === 0) return;
 
-        const usersSnapshot = await getDocs(
-          query(collection(db, 'users'), where('__name__', 'in', userIds))
-        );
+          const usersSnapshot = await getDocs(
+            query(collection(db, 'users'), where('__name__', 'in', userIds))
+          );
 
-        const nameMap = new Map<string, string>();
-        usersSnapshot.docs.forEach((doc) => {
-          nameMap.set(doc.id, doc.data().name as string);
-        });
-        setUserNameMap(nameMap);
+          const nameMap = new Map<string, string>();
+          usersSnapshot.docs.forEach((doc) => {
+            nameMap.set(doc.id, doc.data().name as string);
+          });
+          setUserNameMap(nameMap);
+        } else {
+          // 子どもの場合: 自分の名前だけMapに入れる
+          const nameMap = new Map<string, string>();
+          nameMap.set(user.userId, user.name);
+          setUserNameMap(nameMap);
+        }
       } catch (err) {
         console.error('ユーザー名取得エラー:', err);
       }

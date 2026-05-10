@@ -33,7 +33,7 @@ export default function Home() {
       {/* メインコンテンツ：タスク一覧 */}
       <div>
         <h2 style={{ fontSize: '20px', marginBottom: '15px' }}>お手伝いミッション</h2>
-        <TaskList user={user} />
+        <TaskList />
       </div>
 
       <footer style={{ marginTop: '40px', fontSize: '12px', color: '#ccc' }}>

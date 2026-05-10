@@ -12,7 +12,7 @@ export default function Home() {
   useEffect(() => {
     // ログイン済みで、かつ読み込みが終わっていたら役割選択へ
     if (!loading && user) {
-      router.push('/role-selection');
+      router.push('/auth/role-selection');
     }
   }, [user, loading, router]);
 

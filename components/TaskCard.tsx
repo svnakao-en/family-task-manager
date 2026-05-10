@@ -5,29 +5,18 @@ import { ApproveButton } from './ApproveButton';
 import { CompleteButton } from './CompleteButton';
 import { getStatusColor, getStatusLabel, formatDate } from '@/lib/taskUtils';
 
-/**
- * TaskCard コンポーネントのProps
- */
 interface TaskCardProps {
   task: TaskData;
   currentUser: UserData;
-  onTaskUpdate: () => void; // タスク更新時のコールバック（一覧再取得など）
-  onError?: (error: string) => void; // エラー時のコールバック
+  userNameMap: Map<string, string>;
+  onTaskUpdate: () => void;
+  onError?: (error: string) => void;
 }
 
-/**
- * タスクカードコンポーネント
- *
- * ボタンの統合:
- * - 親なら: status === 'completed' の時に ApproveButton
- * - 子なら: status === 'pending' かつ担当者の時に CompleteButton
- *
- * UIロジックの共通化:
- * - getStatusColor, getStatusLabel, formatDate は taskUtils.ts から import
- */
 export function TaskCard({
   task,
   currentUser,
+  userNameMap,
   onTaskUpdate,
   onError,
 }: TaskCardProps): JSX.Element {
@@ -72,7 +61,11 @@ export function TaskCard({
         <div>報酬: {task.rewardPoints} ポイント</div>
         <div>作成日時: {formatDate(task.createdAt)}</div>
         {task.assignedTo && (
-          <div>担当者: {task.assignedTo === currentUser.userId ? 'あなた' : task.assignedTo}</div>
+          <div>
+            担当者: {task.assignedTo === currentUser.userId
+              ? 'あなた'
+              : (userNameMap.get(task.assignedTo) ?? task.assignedTo)}
+          </div>
         )}
         {task.completedAt && (
           <div>完了日時: {formatDate(task.completedAt)}</div>
@@ -84,7 +77,6 @@ export function TaskCard({
 
       {/* アクションボタン */}
       <div style={{ display: 'flex', gap: '8px' }}>
-        {/* 親: 承認ボタン（status === 'completed' の時のみ） */}
         <ApproveButton
           taskId={task.taskId}
           taskStatus={task.status}
@@ -94,8 +86,6 @@ export function TaskCard({
           onSuccess={onTaskUpdate}
           onError={onError}
         />
-
-        {/* 子: 完了ボタン（status === 'pending' かつ担当者の時のみ） */}
         <CompleteButton
           taskId={task.taskId}
           taskStatus={task.status}

@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import LoginForm from '@/components/LoginForm';
 import { TaskList } from '@/components/TaskList'; 
 import { TaskCard } from '@/components/TaskCard';
+import { TaskForm } from '@/components/TaskForm'; // ← 追加！
 
 export default function Home() {
   const { user, loading } = useAuth();
@@ -29,23 +30,30 @@ export default function Home() {
         <p style={{ color: '#666' }}>ログイン中: {user.email}</p>
       </header>
 
+      {/* 親だけがタスクを作れるようにします */}
+      {user.role === 'parent' && (
+        <section style={{ marginBottom: '30px', backgroundColor: '#f9f9f9', padding: '20px', borderRadius: '10px' }}>
+          <h2 style={{ fontSize: '18px', marginTop: 0 }}>🆕 新しいお手伝いを頼む</h2>
+          <TaskForm />
+        </section>
+      )}
+
       <div>
-        {/* ボブのTaskListPropsに100%準拠させた形 */}
         <TaskList 
           currentUser={user} 
-          renderTask={(task) => (
+          renderTask={(task: any) => (
             <TaskCard 
-              key={task.taskId} // task.id ではなく task.taskId に修正！
+              key={task.taskId} 
               task={task} 
               currentUser={user} 
-              onTaskUpdate={() => {}} // リアルタイム同期なので空でOK！
+              onTaskUpdate={() => {}} 
             />
           )} 
         />
       </div>
 
       <footer style={{ marginTop: '40px', fontSize: '12px', color: '#ccc' }}>
-        Family Reward App - Powered by Bob's Iron Rules
+        Family Reward App - Mission Ready!
       </footer>
     </main>
   );

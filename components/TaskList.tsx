@@ -75,7 +75,7 @@ export function TaskList({
           // pending → completed → approved の順
           // 同じステータス内では新しい順
           tasksData.sort((a, b) => {
-            const statusOrder = { pending: 0, completed: 1, approved: 2 };
+            const statusOrder = { pending: 0, working: 1, completed: 2, approved: 3 };
             const statusDiff = statusOrder[a.status] - statusOrder[b.status];
             
             if (statusDiff !== 0) {

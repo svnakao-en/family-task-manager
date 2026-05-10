@@ -146,4 +146,16 @@ export function formatDate(date: Date): string {
   }).format(date);
 }
 
+/**
+ * 特定のユーザー（こども）の承認済み合計ポイントを計算
+ * @param tasks - タスク一覧
+ * @param userId - 集計したいユーザーのID
+ * @returns 合計ポイント
+ */
+export function calculateTotalPoints(tasks: TaskData[], userId: string): number {
+  return tasks
+    .filter(task => task.status === 'approved' && task.assignedTo === userId)
+    .reduce((sum, task) => sum + task.rewardPoints, 0);
+}
+
 // Made with Bob

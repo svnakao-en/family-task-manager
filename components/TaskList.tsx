@@ -14,6 +14,7 @@ interface TaskListProps {
   currentUser: UserData;
   onError?: (error: string) => void;
   renderTask: (task: TaskData) => JSX.Element; // タスクカードのレンダリング関数
+  onTasksLoaded?: (tasks: TaskData[]) => void; // ← これを追加
 }
 
 /**
@@ -85,6 +86,9 @@ export function TaskList({
           });
 
           setTasks(tasksData);
+          if (onTasksLoaded) {
+            onTasksLoaded(tasksData); // 監督（親）に報告！
+          }
           setIsLoading(false);
         } catch (error) {
           console.error('タスク一覧の処理エラー:', error);

@@ -1,28 +1,22 @@
 "use client";
 
-import { useState, FormEvent } from 'react';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { useState, useEffect, FormEvent } from 'react';
+import { collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { UserData } from '@/types';
 import { taskDataToFirestore } from '@/lib/taskUtils';
 
-/**
- * TaskForm コンポーネントのProps
- */
 interface TaskFormProps {
   currentUser: UserData;
-  onSuccess?: () => void; // 成功時のコールバック
-  onError?: (error: string) => void; // エラー時のコールバック
+  onSuccess?: () => void;
+  onError?: (error: string) => void;
 }
 
-/**
- * タスク投稿フォームコンポーネント（親専用）
- *
- * 鉄則:
- * 1. バリデーション: rewardPoints は必ず1以上の整数
- * 2. マッピング: taskDataToFirestore を経由し、snake_case でDBへ
- * 3. フィールド: familyId, createdBy, status: 'pending', createdAt: serverTimestamp() を確実にセット
- */
+interface ChildOption {
+  userId: string;
+  name: string;
+}
+
 export function TaskForm({
   currentUser,
   onSuccess,
@@ -31,7 +25,40 @@ export function TaskForm({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [rewardPoints, setRewardPoints] = useState('');
+  const [assignedTo, setAssignedTo] = useState('');
+  const [children, setChildren] = useState<ChildOption[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!currentUser.familyId) return;
+
+    const fetchChildren = async () => {
+      try {
+        const membersSnap = await getDocs(
+          query(
+            collection(db, 'family_members'),
+            where('family_id', '==', currentUser.familyId),
+            where('role', '==', 'child')
+          )
+        );
+        const userIds = membersSnap.docs.map((doc) => doc.data().user_id as string);
+        if (userIds.length === 0) return;
+
+        const usersSnap = await getDocs(
+          query(collection(db, 'users'), where('__name__', 'in', userIds))
+        );
+        const childOptions: ChildOption[] = usersSnap.docs.map((doc) => ({
+          userId: doc.id,
+          name: doc.data().name as string,
+        }));
+        setChildren(childOptions);
+      } catch (err) {
+        console.error('子供一覧取得エラー:', err);
+      }
+    };
+
+    fetchChildren();
+  }, [currentUser.familyId]);
 
   // ガード: 親以外には表示しない
   if (currentUser.role !== 'parent') {
@@ -49,39 +76,25 @@ export function TaskForm({
     );
   }
 
-  /**
-   * フォーム送信処理
-   */
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    // バリデーション1: タイトルが空でないこと
     if (!title.trim()) {
       const errorMessage = 'タスク名を入力してください';
-      if (onError) {
-        onError(errorMessage);
-      } else {
-        alert(errorMessage);
-      }
+      onError ? onError(errorMessage) : alert(errorMessage);
       return;
     }
 
-    // バリデーション2: 報酬ポイントが1以上の整数であること
     const points = parseInt(rewardPoints, 10);
     if (isNaN(points) || points < 1) {
       const errorMessage = '報酬ポイントは1以上の整数を入力してください';
-      if (onError) {
-        onError(errorMessage);
-      } else {
-        alert(errorMessage);
-      }
+      onError ? onError(errorMessage) : alert(errorMessage);
       return;
     }
 
     setIsLoading(true);
 
     try {
-      // タスクデータの準備（camelCase）
       const taskData = {
         familyId: currentUser.familyId,
         title: title.trim(),
@@ -89,37 +102,28 @@ export function TaskForm({
         rewardPoints: points,
         status: 'pending' as const,
         createdBy: currentUser.userId,
-        createdAt: new Date(), // serverTimestamp の代わりに一時的に Date を使用
+        createdAt: new Date(),
+        ...(assignedTo ? { assignedTo } : {}),
       };
 
-      // マッピング: taskDataToFirestore で snake_case に変換
       const firestoreData = taskDataToFirestore(taskData);
 
-      // Firestore に追加（serverTimestamp を直接指定）
       await addDoc(collection(db, 'tasks'), {
         ...firestoreData,
-        created_at: serverTimestamp(), // serverTimestamp で上書き
+        created_at: serverTimestamp(),
       });
 
-      // 成功時: フォームをリセット
       setTitle('');
       setDescription('');
       setRewardPoints('');
+      setAssignedTo('');
 
-      if (onSuccess) {
-        onSuccess();
-      }
+      if (onSuccess) onSuccess();
     } catch (error) {
       console.error('タスク投稿エラー:', error);
       const errorMessage = error instanceof Error ? error.message : 'タスクの投稿に失敗しました';
-      
-      if (onError) {
-        onError(errorMessage);
-      } else {
-        alert(errorMessage);
-      }
+      onError ? onError(errorMessage) : alert(errorMessage);
     } finally {
-      // 鉄壁の finally: 必ず isLoading をリセット
       setIsLoading(false);
     }
   };
@@ -203,6 +207,37 @@ export function TaskForm({
           }}
         />
       </div>
+
+      {/* 担当者指名（任意・子供が存在する場合のみ表示） */}
+      {children.length > 0 && (
+        <div style={{ marginBottom: '16px' }}>
+          <label htmlFor="task-assignee" style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+            担当者（任意）
+          </label>
+          <select
+            id="task-assignee"
+            value={assignedTo}
+            onChange={(e) => setAssignedTo(e.target.value)}
+            disabled={isLoading}
+            style={{
+              width: '100%',
+              padding: '8px',
+              fontSize: '14px',
+              border: '1px solid #ccc',
+              borderRadius: '4px',
+              boxSizing: 'border-box',
+              backgroundColor: 'white',
+            }}
+          >
+            <option value="">指名なし（先着順）</option>
+            {children.map((child) => (
+              <option key={child.userId} value={child.userId}>
+                {child.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* 送信ボタン */}
       <button

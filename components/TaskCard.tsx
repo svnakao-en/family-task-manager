@@ -5,6 +5,7 @@ import { ApproveButton } from './ApproveButton';
 import { CompleteButton } from './CompleteButton';
 import { StartButton } from './StartButton';
 import { RejectButton } from './RejectButton';
+import { DeleteButton } from './DeleteButton';
 import { getStatusColor, getStatusLabel, formatDate } from '@/lib/taskUtils';
 
 interface TaskCardProps {
@@ -109,6 +110,14 @@ export function TaskCard({
         />
         {/* 親: 差し戻しボタン（completed または working） */}
         <RejectButton
+          taskId={task.taskId}
+          taskStatus={task.status}
+          currentUser={currentUser}
+          onSuccess={onTaskUpdate}
+          onError={onError}
+        />
+        {/* 親: 削除ボタン（pending のみ） */}
+        <DeleteButton
           taskId={task.taskId}
           taskStatus={task.status}
           currentUser={currentUser}

@@ -10,6 +10,7 @@ import {
   increment,
   getDoc,
   runTransaction,
+  deleteDoc,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { UserData, TaskData } from '@/types';
@@ -268,6 +269,46 @@ export async function rejectTask(
   });
 
   await batch.commit();
+}
+
+/**
+ * タスクを物理削除する（親が使用）
+ * pending のみ削除可能
+ */
+export async function deleteTask(
+  taskId: string,
+  currentUser: UserData
+): Promise<void> {
+  if (currentUser.role !== 'parent') {
+    throw new Error('タスクの削除は親のみが実行できます');
+  }
+  if (!currentUser.familyId) {
+    throw new Error('家族IDが設定されていません');
+  }
+
+  const taskRef = doc(db, 'tasks', taskId);
+  const taskSnap = await getDoc(taskRef);
+
+  if (!taskSnap.exists()) {
+    throw new Error('タスクが存在しません');
+  }
+
+  let task: TaskData;
+  try {
+    task = buildTaskData(taskSnap.data(), taskSnap.id);
+  } catch {
+    throw new Error('タスクデータの変換に失敗しました');
+  }
+
+  if (task.familyId !== currentUser.familyId) {
+    throw new Error('権限がありません');
+  }
+
+  if (task.status !== 'pending') {
+    throw new Error('削除できるのは未着手（pending）のタスクのみです');
+  }
+
+  await deleteDoc(taskRef);
 }
 
 // Made with Bob

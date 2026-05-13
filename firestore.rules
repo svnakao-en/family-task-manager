@@ -135,7 +135,11 @@ service cloud.firestore {
         isValidRejection()
       );
 
-      allow delete: if false;
+      // 削除: 親のみ、pending のみ
+      allow delete: if isAuthenticated() &&
+        isParent() &&
+        belongsToFamily(resource.data.family_id) &&
+        resource.data.status == 'pending';
     }
 
     // ----------------------------------------

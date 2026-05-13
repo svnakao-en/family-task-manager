@@ -29,6 +29,7 @@ export function RejectButton({
 
   const handleReject = async () => {
     if (isLoading) return;
+    if (!window.confirm('このタスクを差し戻しますか？\n子供の進捗がリセットされます。')) return;
     setIsLoading(true);
     try {
       await rejectTask(taskId, currentUser);

@@ -1,5 +1,5 @@
 # 🤖 AI_CONTEXT.md - Family Task Management System
-## 📅 最終更新: 2026-05-07 | ステータス: 小規模商用β運用可能
+## 📅 最終更新: 2026-05-14 | ステータス: 本番稼働中・Phase 6+ 開発継続
 
 ---
 
@@ -7,15 +7,19 @@
 
 ### ステータス遷移フロー
 ```
-pending (未着手) → completed (完了報告) → approved (承認済み・不変)
+pending (未着手) → working (作業中) → completed (完了報告) → approved (承認済み・不変)
+                                  ↑                        |
+                                  └──── 差し戻し（親のみ）──┘
+                                        ※ approved からの差し戻しは禁止（不変）
 ```
 
 **遷移ルール:**
-1. **pending → completed**: 子供のみ実行可能（自分が担当のタスクのみ）
-2. **completed → approved**: 親のみ実行可能（報酬付与・会計確定）
-3. **approved の不変性**: 一度承認されたら、二度と動かさない（会計の鉄則）
-4. **逆流禁止**: approved → completed, completed → pending は物理的に不可
-5. **差し戻し禁止**: approved → pending も物理的に不可（会計確定後は不変）
+1. **pending → working**: 子供のみ実行可能（担当者が設定されるか、自分が担当の場合のみ）
+2. **working → completed**: 子供のみ実行可能（自分が担当のタスクのみ）
+3. **completed → approved**: 親のみ実行可能（報酬付与・会計確定）
+4. **completed/working → pending（差し戻し）**: 親のみ実行可能（承認前のやり直し）
+5. **approved の不変性**: 一度承認されたら、二度と動かさない（会計の鉄則）
+6. **approved からの逆流禁止**: approved → completed, approved → pending は物理的に不可
 
 ### 型定義（types/index.ts）
 
@@ -39,7 +43,7 @@ export interface TaskData {
   title: string;
   description?: string;
   rewardPoints: number;
-  status: 'pending' | 'completed' | 'approved';
+  status: 'pending' | 'working' | 'completed' | 'approved';
   assignedTo?: string;
   createdBy: string;
   createdAt: Date;
@@ -56,7 +60,7 @@ export interface FirestoreTaskDocument {
   title: string;
   description?: string;
   reward_points: number;
-  status: 'pending' | 'completed' | 'approved';
+  status: 'pending' | 'working' | 'completed' | 'approved';
   assigned_to?: string;
   created_by: string;
   created_at: Timestamp;
@@ -110,16 +114,9 @@ Rules = 物理的な法律（最後の砦）
 │ - サーバー状態を正解とする設計          │
 │ - 理由を明示する親切なUX                │
 │ - 連打防止とエラーハンドリング          │
+│ - 重要操作には確認ダイアログ必須        │
 └─────────────────────────────────────────┘
 ```
-
-### 役割分担の真実
-- **Security Rules**: 「誰が」「何を」できるかを物理的に制限（最後の砦）
-- **ロジック層**: 「いくら」「どのように」を数学的に検証（整理された手順書）
-- **UI層**: ユーザーに親切に、かつ堅牢に（親切な案内板）
-
-**重要**: フロントエンドは「親切」であるべきだが、「最後の砦」ではない。
-Security Rules、Firebase Authentication、Transaction の整合性こそが物理的な最後の砦である。
 
 ---
 
@@ -130,14 +127,16 @@ Security Rules、Firebase Authentication、Transaction の整合性こそが物�
 3. バリデーションなしのDB書き込み禁止
 4. 勝手な最適化禁止:
    - `getDoc` による事前チェックを省くこと
-   - `Transaction` を `writeBatch` に戻すこと
+   - `Transaction` を `writeBatch` に戻すこと（approveTask / completeTask）
    - 「コードが短くなる」という理由での変更
 5. 型変換の省略禁止:
    - `buildTaskData` を通さず生データをUIに流すこと
    - snake_case のデータがUIに漏れること
 6. **approved ステータスの変更禁止**:
    - 一度承認されたタスクは、いかなる理由があっても変更不可
-   - 差し戻し機能は実装禁止（会計の鉄則）
+   - approved → pending の差し戻しは実装禁止（会計の鉄則）
+7. **確認ダイアログの省略禁止**（Phase 6+ 追加）:
+   - 削除・差し戻しなど重要な操作には必ず `window.confirm` 等を挟むこと
 
 ---
 
@@ -155,137 +154,76 @@ Security Rules、Firebase Authentication、Transaction の整合性こそが物�
 - TaskData 型定義、buildTaskData/taskDataToFirestore 実装
 - approveTask（5段階ガード）、completeTask 実装
 - Toast、ApproveButton、CompleteButton 実装
-- 地雷除去（convertTimestamp、マッピングミス、assignedTo ガード）
 
 ### Phase 5: 最終仕上げ（基盤完成） (完了)
 - 家族作成バグ修正（owner_id 特例）
 - TaskForm、TaskList、TaskCard、TaskPage 実装
 - リアルタイム同期（onSnapshot）
+- approveTask / completeTask の Transaction 化
+- Security Rules の hasOnly + hasAll 強化
+- approved の完全 Immutable 化
 
-### Phase 5.5: 要塞の再補強（商用品質化） (完了)
-- approveTask の Transaction 化（競合防御）
-- Security Rules の hasOnly 強化（ホワイトリスト化）
-- TaskList の orderBy 実装（複合インデックス必要）
+### Phase 6: 運用改善機能（開発中・本番稼働中）
 
-### Phase 5.5 Final: 最終防衛線の構築 (完了)
-- Transaction内ステータス再チェック（二重報酬完全防止）
-- families Rules の型・サイズ検証強化
-- 複合インデックス設定メモの追記
+#### 完了済み
+- [x] **ステータス拡張**: `working`（作業中）ステータス追加
+  - `types/index.ts` に `'working'` 追加
+  - `taskUtils.ts` に色・ラベル追加
+  - `startTask()` 実装（pending → working）
+  - `completeTask()` を working → completed に変更
+  - `StartButton` コンポーネント実装
+  - Security Rules に `isValidStart()` 追加
 
-### Phase 5 最終クリーンアップ (完了)
-- AI_CONTEXT.md の聖域化（仕様の単一化）
-- completeTask の Transaction 化（担当者競合防止）
-- Firestore Rules の hasAll 併用（必須フィールド検証）
+- [x] **差し戻し機能**: 承認前（completed/working）のみ → pending に差し戻し
+  - `rejectTask()` 実装
+  - `RejectButton` コンポーネント実装
+  - Security Rules に `isValidRejection()` 追加
 
-### Phase 5 真・完遂 (完了)
-- approved ステータスの完全 Immutable 化
-- 「最後の砦」の定義修正（Rules が物理的な最後の砦）
-- 評価の適正化（β版への謙虚な表現）
-
----
-
-## 🚨 重要: Firestore 複合インデックスの作成（必須）
-
-**このインデックスを作成しないと、本番環境でアプリがクラッシュします。**
-
-### 作成手順
-1. Firebase Console → Firestore Database → インデックス
-2. 複合インデックスを追加:
-   - **コレクションID**: `tasks`
-   - **フィールド1**: `family_id` (Ascending)
-   - **フィールド2**: `created_at` (Descending)
-   - **クエリスコープ**: コレクション
-
-### 開発環境での確認
-1. アプリ起動 → タスク一覧ページにアクセス
-2. コンソールにエラーが表示される場合、エラーメッセージ内のURLをクリック
-3. 自動的にインデックス作成画面が開く → 「作成」をクリック
-4. 数分待機（ステータスが「有効」になるまで）
+#### 未実装（次の開発対象）
+- [ ] **確認ダイアログ**: `RejectButton` に `window.confirm` を追加
+- [ ] **物理削除**: `pending` のみ対象。親が実行。確認ダイアログ必須
+- [ ] **担当者指名**: タスク作成時に特定の子を選択可能にする
+- [ ] **タスク編集**: `pending` 時のみ、タイトル・ポイントの修正を可能にする
 
 ---
 
-## 📋 Phase 6 ロードマップ（最適化・拡張）
+## 🚨 重要: Firestore 複合インデックスの作成（必須・作成済みであること）
 
-### 1. Custom Claims への移行（最優先）
-**現状の課題:**
-- Security Rules 内で `get()` を多用（isParent 判定で family_members を参照）
-- 1リクエストあたり追加の読み取りコストが発生
-- レイテンシの増加
-
-**解決策:**
-- Firebase Authentication の Custom Claims に `role` を保存
-- Rules 内で `request.auth.token.role == 'parent'` で判定
-- `get()` 呼び出しをゼロ化 → コスト削減、速度向上
-
-**実装手順:**
-1. Cloud Functions で setCustomUserClaims を実装
-2. 役割選択時に Custom Claims を設定
-3. Security Rules を Custom Claims ベースに書き換え
-4. family_members の role フィールドは監査用に残す
-
-### 2. タスク削除機能
-- 親のみが削除可能
-- 論理削除 or 物理削除の選択
-
-### 3. タスク編集機能（制限付き）
-- 親のみが編集可能
-- approved ステータスのタスクは編集不可（不変性の保証）
-- 報酬額変更の監査ログ
+- **コレクションID**: `tasks`
+- **フィールド1**: `family_id` (Ascending)
+- **フィールド2**: `created_at` (Descending)
+- **クエリスコープ**: コレクション
 
 ---
 
-## 🎯 現在の到達点: 小規模商用β運用可能
+## 📋 Phase 6 残タスク詳細
 
-**ボブによる実装完了報告（2026-05-07）**
+### 1. 確認ダイアログ（RejectButton）
+**対象**: `components/RejectButton.tsx`
+**内容**: `handleReject` 内に `window.confirm('本当に差し戻しますか？')` を追加
 
-本プロジェクトは、以下の3つの盾により、小規模商用β環境での運用に十分な堅牢性を備えています:
+### 2. 物理削除機能
+**対象**: `lib/taskActions.ts`、`components/TaskCard.tsx`、`firestore.rules`
+**ルール**:
+- 親のみが実行可能
+- `pending` ステータスのタスクのみ削除可能
+- 確認ダイアログ必須
+- Security Rules に `allow delete` ルール追加
 
-### 第1の盾: Transaction による競合防御
-- `runTransaction` による原子性保証
-- Transaction内での生データ直接チェック（100万分の1秒の競合も防止）
-- approveTask と completeTask の両方で実装済み
+### 3. 担当者指名
+**対象**: `components/TaskForm.tsx`、`lib/taskActions.ts`（createTask 関数化）
+**ルール**:
+- 親が作成時に家族の子（child）を選択できる
+- 未選択の場合は `assignedTo` なし（従来通り先着順）
+- 指名された子のみ `StartButton` が表示される
 
-### 第2の盾: Security Rules による物理的制限（最後の砦）
-- `hasOnly` + `hasAll` によるフィールド検証（ホワイトリスト化）
-- 型・サイズ検証（空文字・不正な型・巨大データの拒否）
-- ステータス遷移の物理的強制
-- **approved の完全 Immutable 化**（会計確定後は二度と動かさない）
-
-### 第3の盾: UI層による親切な防御
-- サーバー状態を正解とする設計（ローカル状態の越権行為を排除）
-- 理由を明示するUX（「なぜボタンが押せないのか」を説明）
-- 鉄壁の finally ブロック（非同期処理の確実なクリーンアップ）
-
----
-
-## ⚠️ Pending Issues（今後の課題）
-
-本システムは小規模商用β運用には十分ですが、以下の運用層の実装が未完了です:
-
-### 1. 監視・アラート
-- [ ] Firebase Performance Monitoring の導入
-- [ ] Error Tracking（Sentry等）の導入
-- [ ] ダッシュボードでの異常検知
-
-### 2. バックアップ・リカバリ
-- [ ] Firestore の自動バックアップ設定
-- [ ] データ復旧手順の文書化
-- [ ] 定期的なバックアップテスト
-
-### 3. セキュリティ強化
-- [ ] Firebase App Check の導入（Bot対策）
-- [ ] Rate Limiting の実装
-- [ ] 不正アクセス検知
-
-### 4. スケーラビリティ
-- [ ] Custom Claims への移行（コスト削減）
-- [ ] Cloud Functions の最適化
-- [ ] キャッシュ戦略の実装
-
-### 5. 運用ドキュメント
-- [ ] 障害対応マニュアル
-- [ ] ユーザーサポート手順
-- [ ] データ削除・GDPR対応手順
+### 4. タスク編集
+**対象**: `lib/taskActions.ts`、`components/TaskCard.tsx`（編集フォーム）
+**ルール**:
+- 親のみが実行可能
+- `pending` ステータスのタスクのみ編集可能
+- 編集可能フィールド: `title`, `description`, `rewardPoints`
+- `approved` タスクの編集は絶対禁止
 
 ---
 
@@ -294,102 +232,54 @@ Security Rules、Firebase Authentication、Transaction の整合性こそが物�
 ### approveTask（Transaction版）
 ```typescript
 export async function approveTask(taskId: string, currentUser: UserData): Promise<void> {
-  if (currentUser.role !== 'parent') {
-    throw new Error('タスクの承認は親のみが実行できます');
-  }
-
-  const taskRef = doc(db, 'tasks', taskId);
-
-  await runTransaction(db, async (transaction) => {
-    const taskSnap = await transaction.get(taskRef);
-    
-    if (!taskSnap.exists()) throw new Error('タスクが存在しません');
-
-    // Transaction内での生データ直接チェック（最重要）
-    const rawData = taskSnap.data();
-    const currentStatus = rawData?.status;
-    
-    if (currentStatus === 'approved') throw new Error('既に承認済みです');
-    if (currentStatus !== 'completed') throw new Error('承認可能な状態ではありません');
-
-    const task = buildTaskData(rawData, taskSnap.id);
-
-    // 5段階ガード
-    if (task.familyId !== currentUser.familyId) throw new Error('権限がありません');
-    if (!task.assignedTo) throw new Error('担当者が設定されていません');
-    if (task.rewardPoints <= 0) throw new Error('報酬ポイントが不正です');
-
-    // アトミック更新
-    const userRef = doc(db, 'users', task.assignedTo);
-    transaction.update(taskRef, { status: 'approved', approved_at: serverTimestamp() });
-    transaction.update(userRef, { total_reward: increment(task.rewardPoints) });
-  });
+  // 親のみ / familyId チェック → runTransaction
+  // Transaction内: status が 'completed' であること確認
+  // アトミック更新: status → 'approved', total_reward += rewardPoints
 }
 ```
 
-### completeTask（Transaction版）
+### completeTask（Transaction版・working → completed）
 ```typescript
 export async function completeTask(taskId: string, currentUser: UserData): Promise<void> {
-  if (currentUser.role !== 'child') {
-    throw new Error('タスクの完了報告は子供のみが実行できます');
-  }
+  // 子のみ / familyId チェック → runTransaction
+  // Transaction内: status が 'working' であること確認（pendingでは不可）
+  // アトミック更新: status → 'completed', completed_at: serverTimestamp()
+}
+```
 
-  const taskRef = doc(db, 'tasks', taskId);
+### startTask（pending → working）
+```typescript
+export async function startTask(taskId: string, currentUser: UserData): Promise<void> {
+  // 子のみ / familyId チェック
+  // status が 'pending' であること確認
+  // assigned_to が自分または未設定であること確認
+  // 更新: status → 'working', assigned_to セット（未設定時のみ）
+}
+```
 
-  await runTransaction(db, async (transaction) => {
-    const taskSnap = await transaction.get(taskRef);
-    
-    if (!taskSnap.exists()) throw new Error('タスクが存在しません');
-
-    // Transaction内での生データ直接チェック
-    const rawData = taskSnap.data();
-    const currentStatus = rawData?.status;
-    const currentAssignedTo = rawData?.assigned_to;
-
-    if (currentStatus === 'completed' || currentStatus === 'approved') {
-      throw new Error('既に完了済みです');
-    }
-    if (currentStatus !== 'pending') {
-      throw new Error('完了報告可能な状態ではありません');
-    }
-
-    const task = buildTaskData(rawData, taskSnap.id);
-
-    if (task.familyId !== currentUser.familyId) throw new Error('権限がありません');
-    if (currentAssignedTo && currentAssignedTo !== currentUser.userId) {
-      throw new Error('このタスクは他の人に割り当てられています');
-    }
-
-    // アトミック更新（assigned_to の不変性保証）
-    const updateData: any = {
-      status: 'completed',
-      completed_at: serverTimestamp(),
-    };
-
-    if (!currentAssignedTo) {
-      updateData.assigned_to = currentUser.userId;
-    }
-
-    transaction.update(taskRef, updateData);
-  });
+### rejectTask（completed/working → pending）
+```typescript
+export async function rejectTask(taskId: string, currentUser: UserData): Promise<void> {
+  // 親のみ / familyId チェック
+  // status が 'completed' または 'working' であること確認
+  // 更新: status → 'pending'
 }
 ```
 
 ---
 
-## 🙏 謝辞
-
-このプロジェクトは、監査官の厳しい指摘と、マネージャーの的確な指導により、
-小規模商用β運用に耐えうる品質に到達しました。
+## 🙏 開発原則
 
 **監査官の教え:**
 「UI = 親切、Logic = 整理、Rules = 法律」
 「フロントエンドを信じるな。物理的な最後の砦は Security Rules だ」
 「approved は会計の確定。二度と動かすな」
 
-これらの教えを胸に、Phase 6 以降の開発を進めます。
+**Phase 6+ の追加原則:**
+「運用中のシステムに触れるときは、1機能ずつ、段階的に」
+「破壊的変更はしない。拡張するだけ」
 
 ---
 
 Made with ❤️ by Bob
-**ステータス: 小規模商用β運用可能（運用層の実装は今後の課題）**
+**ステータス: 本番稼働中（Vercel デプロイ済み・家族内実運用中）**

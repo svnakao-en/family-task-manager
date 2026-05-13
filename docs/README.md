@@ -4,10 +4,15 @@
 - **Language**: TypeScript (Strict Mode)
 - **Framework**: Next.js 14 (App Router)
 - **Database**: Firebase (Auth / Firestore)
+- **Deploy**: Vercel（本番稼働中）
 
 ## 📏 開発規約
 - **命名規則**: フロントエンドは `camelCase` 統一。DBは `snake_case` を使用し、マッピング層で変換する。
 - **初期状態**: 新規ユーザーは `role: 'unknown'` で作成される。
+- **ステータス遷移**: `pending → working → completed → approved`（承認後は不変）
+
+## 🚀 現在のステータス
+Phase 5 完了・本番稼働中。Phase 6（運用改善機能）を開発継続中。
 
 ## 🚀 開発の進め方
-AIと協力して開発する場合、ルート直下の `AI_SYNC_DOC.md` を最新のセーブデータとして各AIに読み込ませてください。
+AIと協力して開発する場合、`docs/AI_CONTEXT.md` を最新のセーブデータとして各AIに読み込ませてください。

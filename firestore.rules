@@ -132,7 +132,8 @@ service cloud.firestore {
         isValidStart()      ||
         isValidCompletion() ||
         isValidApproval()   ||
-        isValidRejection()
+        isValidRejection()  ||
+        isValidEdit()
       );
 
       // 削除: 親のみ、pending のみ
@@ -198,6 +199,24 @@ service cloud.firestore {
         request.resource.data.family_id == resource.data.family_id &&
         request.resource.data.reward_points == resource.data.reward_points &&
         request.resource.data.assigned_to == resource.data.assigned_to
+      );
+    }
+
+    // ----------------------------------------
+    // pending のフィールド編集（親のみ・title/description/reward_points）
+    // ----------------------------------------
+    function isValidEdit() {
+      return (
+        isParent() &&
+        belongsToFamily(resource.data.family_id) &&
+        resource.data.status == 'pending' &&
+        request.resource.data.status == 'pending' &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['title', 'description', 'reward_points']) &&
+        request.resource.data.family_id == resource.data.family_id &&
+        request.resource.data.created_by == resource.data.created_by &&
+        request.resource.data.reward_points is int &&
+        request.resource.data.reward_points > 0
       );
     }
 

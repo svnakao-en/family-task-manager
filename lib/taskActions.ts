@@ -272,6 +272,62 @@ export async function rejectTask(
 }
 
 /**
+ * タスクを編集する（親が使用）
+ * pending のみ編集可能。title / description / rewardPoints のみ変更可
+ */
+export async function editTask(
+  taskId: string,
+  currentUser: UserData,
+  updates: { title: string; description?: string; rewardPoints: number }
+): Promise<void> {
+  if (currentUser.role !== 'parent') {
+    throw new Error('タスクの編集は親のみが実行できます');
+  }
+  if (!currentUser.familyId) {
+    throw new Error('家族IDが設定されていません');
+  }
+  if (!updates.title.trim()) {
+    throw new Error('タスク名を入力してください');
+  }
+  if (updates.rewardPoints < 1) {
+    throw new Error('報酬ポイントは1以上の整数を入力してください');
+  }
+
+  const taskRef = doc(db, 'tasks', taskId);
+  const taskSnap = await getDoc(taskRef);
+
+  if (!taskSnap.exists()) {
+    throw new Error('タスクが存在しません');
+  }
+
+  let task: TaskData;
+  try {
+    task = buildTaskData(taskSnap.data(), taskSnap.id);
+  } catch {
+    throw new Error('タスクデータの変換に失敗しました');
+  }
+
+  if (task.familyId !== currentUser.familyId) {
+    throw new Error('権限がありません');
+  }
+  if (task.status !== 'pending') {
+    throw new Error('編集できるのは未着手（pending）のタスクのみです');
+  }
+
+  const updateData: Record<string, unknown> = {
+    title: updates.title.trim(),
+    reward_points: updates.rewardPoints,
+  };
+  if (updates.description !== undefined) {
+    updateData.description = updates.description.trim() || null;
+  }
+
+  const batch = writeBatch(db);
+  batch.update(taskRef, updateData);
+  await batch.commit();
+}
+
+/**
  * タスクを物理削除する（親が使用）
  * pending のみ削除可能
  */

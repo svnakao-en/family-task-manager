@@ -36,7 +36,10 @@ service cloud.firestore {
     // families コレクション
     // ========================================
     match /families/{familyId} {
-      allow read: if isAuthenticated() && belongsToFamily(familyId);
+      // get（ID直接指定）: 認証済みなら可（子アカウント登録時の家族ID確認に必要）
+      allow get: if isAuthenticated();
+      // list（一覧取得）: 家族メンバーのみ
+      allow list: if isAuthenticated() && belongsToFamily(familyId);
       allow create, update: if isAuthenticated() &&
         isParent() &&
         belongsToFamily(familyId);
@@ -97,11 +100,14 @@ service cloud.firestore {
       allow create: if isAuthenticated() &&
         request.resource.data.user_id == request.auth.uid;
 
-      // user_id と family_id は変更不可（憲法：データ不変性）
+      // user_id は変更不可。family_id は未設定からの初回設定のみ許可（設定後は変更不可）
       allow update: if isAuthenticated() &&
         resource.data.user_id == request.auth.uid &&
         request.resource.data.user_id == resource.data.user_id &&
-        request.resource.data.family_id == resource.data.family_id;
+        (
+          !('family_id' in resource.data) ||
+          request.resource.data.family_id == resource.data.family_id
+        );
 
       allow delete: if false;
     }

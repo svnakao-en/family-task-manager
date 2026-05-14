@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { TaskForm } from '@/components/TaskForm';
+import { TaskForm, InitialTaskData } from '@/components/TaskForm';
 import { TaskList } from '@/components/TaskList';
 import { TaskCard } from '@/components/TaskCard';
 import { useToast, Toast } from '@/components/Toast';
@@ -14,6 +14,7 @@ export default function TaskPage() {
   const { user, loading } = useAuth();
   const { showToast, ToastContainer } = useToast();
   const [userNameMap, setUserNameMap] = useState<Map<string, string>>(new Map());
+  const [initialTaskData, setInitialTaskData] = useState<InitialTaskData | undefined>();
 
   useEffect(() => {
     if (loading || !user || !user.familyId) return;
@@ -21,7 +22,6 @@ export default function TaskPage() {
     const fetchUserNames = async () => {
       try {
         if (user.role === 'parent') {
-          // 親の場合: 家族全員の名前を取得
           const membersSnapshot = await getDocs(
             query(collection(db, 'family_members'), where('family_id', '==', user.familyId))
           );
@@ -38,7 +38,6 @@ export default function TaskPage() {
           });
           setUserNameMap(nameMap);
         } else {
-          // 子どもの場合: 自分の名前だけMapに入れる
           const nameMap = new Map<string, string>();
           nameMap.set(user.userId, user.name);
           setUserNameMap(nameMap);
@@ -89,6 +88,15 @@ export default function TaskPage() {
     showToast(error, 'error');
   };
 
+  const handleCopy = (task: TaskData) => {
+    setInitialTaskData({
+      title: task.title,
+      description: task.description,
+      rewardPoints: task.rewardPoints,
+      assignedTo: task.assignedTo,
+    });
+  };
+
   const renderTask = (task: TaskData) => (
     <TaskCard
       key={task.taskId}
@@ -96,6 +104,7 @@ export default function TaskPage() {
       currentUser={user}
       userNameMap={userNameMap}
       onTaskUpdate={handleTaskUpdate}
+      onCopy={handleCopy}
       onError={handleError}
     />
   );
@@ -145,6 +154,8 @@ export default function TaskPage() {
         <section style={{ marginBottom: '32px' }}>
           <TaskForm
             currentUser={user}
+            initialData={initialTaskData}
+            onInitialDataUsed={() => setInitialTaskData(undefined)}
             onSuccess={() => showToast('タスクを投稿しました', 'success')}
             onError={handleError}
           />

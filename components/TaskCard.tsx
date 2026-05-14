@@ -15,6 +15,7 @@ interface TaskCardProps {
   currentUser: UserData;
   userNameMap: Map<string, string>;
   onTaskUpdate: () => void;
+  onCopy?: (task: TaskData) => void;
   onError?: (error: string) => void;
 }
 
@@ -23,6 +24,7 @@ export function TaskCard({
   currentUser,
   userNameMap,
   onTaskUpdate,
+  onCopy,
   onError,
 }: TaskCardProps): JSX.Element {
   const [isEditing, setIsEditing] = useState(false);
@@ -163,6 +165,25 @@ export function TaskCard({
             onSuccess={onTaskUpdate}
             onError={onError}
           />
+          {/* 親: コピーして作成ボタン（全ステータス） */}
+          {currentUser.role === 'parent' && onCopy && (
+            <button
+              onClick={() => onCopy(task)}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: '#607D8B',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 'bold',
+                transition: 'background-color 0.2s',
+              }}
+            >
+              📋 コピーして作成
+            </button>
+          )}
         </div>
       )}
     </div>

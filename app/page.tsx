@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import LoginForm from '@/components/LoginForm';
 import { TaskList } from '@/components/TaskList';
 import { TaskCard } from '@/components/TaskCard';
-import { TaskForm } from '@/components/TaskForm';
+import { TaskForm, InitialTaskData } from '@/components/TaskForm';
 import { TaskData } from '@/types';
 import Link from 'next/link';
 import { db } from '@/lib/firebase';
@@ -16,6 +16,7 @@ export default function Home() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [userNameMap, setUserNameMap] = useState<Map<string, string>>(new Map());
+  const [initialTaskData, setInitialTaskData] = useState<InitialTaskData | undefined>();
 
   useEffect(() => {
     if (!loading && user && (!user.role || user.role === 'unknown')) {
@@ -29,7 +30,6 @@ export default function Home() {
     const fetchUserNames = async () => {
       try {
         if (user.role === 'parent') {
-          // 親の場合: 家族全員の名前を取得
           const membersSnapshot = await getDocs(
             query(collection(db, 'family_members'), where('family_id', '==', user.familyId))
           );
@@ -46,7 +46,6 @@ export default function Home() {
           });
           setUserNameMap(nameMap);
         } else {
-          // 子どもの場合: 自分の名前だけMapに入れる
           const nameMap = new Map<string, string>();
           nameMap.set(user.userId, user.name);
           setUserNameMap(nameMap);
@@ -61,6 +60,15 @@ export default function Home() {
 
   if (loading) return <div style={{ padding: '50px', textAlign: 'center' }}>読み込み中...</div>;
   if (!user) return <LoginForm />;
+
+  const handleCopy = (task: TaskData) => {
+    setInitialTaskData({
+      title: task.title,
+      description: task.description,
+      rewardPoints: task.rewardPoints,
+      assignedTo: task.assignedTo,
+    });
+  };
 
   return (
     <main style={{ padding: '20px', maxWidth: '800px', margin: '0 auto', fontFamily: 'sans-serif', color: '#333' }}>
@@ -111,7 +119,11 @@ export default function Home() {
 
       {user.role === 'parent' && (
         <section style={{ marginBottom: '30px' }}>
-          <TaskForm currentUser={user} />
+          <TaskForm
+            currentUser={user}
+            initialData={initialTaskData}
+            onInitialDataUsed={() => setInitialTaskData(undefined)}
+          />
         </section>
       )}
 
@@ -125,6 +137,7 @@ export default function Home() {
               currentUser={user}
               userNameMap={userNameMap}
               onTaskUpdate={() => {}}
+              onCopy={handleCopy}
             />
           )}
         />

@@ -1,13 +1,22 @@
 "use client";
 
-import { useState, useEffect, FormEvent } from 'react';
+import { useState, useEffect, useRef, FormEvent } from 'react';
 import { collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { UserData } from '@/types';
 import { taskDataToFirestore } from '@/lib/taskUtils';
 
+export interface InitialTaskData {
+  title: string;
+  description?: string;
+  rewardPoints: number;
+  assignedTo?: string;
+}
+
 interface TaskFormProps {
   currentUser: UserData;
+  initialData?: InitialTaskData;
+  onInitialDataUsed?: () => void;
   onSuccess?: () => void;
   onError?: (error: string) => void;
 }
@@ -19,6 +28,8 @@ interface ChildOption {
 
 export function TaskForm({
   currentUser,
+  initialData,
+  onInitialDataUsed,
   onSuccess,
   onError,
 }: TaskFormProps): JSX.Element | null {
@@ -28,6 +39,18 @@ export function TaskForm({
   const [assignedTo, setAssignedTo] = useState('');
   const [children, setChildren] = useState<ChildOption[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  // initialData が渡されたらフォームに注入してスクロール
+  useEffect(() => {
+    if (!initialData) return;
+    setTitle(initialData.title);
+    setDescription(initialData.description ?? '');
+    setRewardPoints(String(initialData.rewardPoints));
+    setAssignedTo(initialData.assignedTo ?? '');
+    formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    onInitialDataUsed?.();
+  }, [initialData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!currentUser.familyId) return;
@@ -129,7 +152,7 @@ export function TaskForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ padding: '16px', backgroundColor: '#f5f5f5', borderRadius: '8px' }}>
+    <form ref={formRef} onSubmit={handleSubmit} style={{ padding: '16px', backgroundColor: '#f5f5f5', borderRadius: '8px' }}>
       <h2 style={{ marginTop: 0, marginBottom: '16px', fontSize: '20px', fontWeight: 'bold' }}>
         新しいタスクを投稿
       </h2>

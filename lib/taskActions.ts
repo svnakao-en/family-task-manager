@@ -11,6 +11,7 @@ import {
   getDoc,
   runTransaction,
   deleteDoc,
+  deleteField,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { UserData, TaskData } from '@/types';
@@ -266,6 +267,7 @@ export async function rejectTask(
   const batch = writeBatch(db);
   batch.update(taskRef, {
     status: 'pending',
+    assigned_to: deleteField(),
   });
 
   await batch.commit();

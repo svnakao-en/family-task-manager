@@ -236,7 +236,8 @@ service cloud.firestore {
         (resource.data.status == 'completed' || resource.data.status == 'working') &&
         request.resource.data.status == 'pending' &&
         request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['status']) &&
+          .hasOnly(['status', 'assigned_to']) &&
+        !('assigned_to' in request.resource.data) &&
         request.resource.data.family_id == resource.data.family_id &&
         request.resource.data.reward_points == resource.data.reward_points
       );

@@ -280,7 +280,7 @@ export async function rejectTask(
 export async function editTask(
   taskId: string,
   currentUser: UserData,
-  updates: { title: string; description?: string; rewardPoints: number }
+  updates: { title: string; description?: string; rewardPoints: number; assignedTo?: string }
 ): Promise<void> {
   if (currentUser.role !== 'parent') {
     throw new Error('タスクの編集は親のみが実行できます');
@@ -322,6 +322,9 @@ export async function editTask(
   };
   if (updates.description !== undefined) {
     updateData.description = updates.description.trim() || null;
+  }
+  if (updates.assignedTo !== undefined) {
+    updateData.assigned_to = updates.assignedTo || deleteField();
   }
 
   const batch = writeBatch(db);

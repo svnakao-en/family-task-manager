@@ -218,7 +218,7 @@ service cloud.firestore {
         resource.data.status == 'pending' &&
         request.resource.data.status == 'pending' &&
         request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['title', 'description', 'reward_points']) &&
+          .hasOnly(['title', 'description', 'reward_points', 'assigned_to']) &&
         request.resource.data.family_id == resource.data.family_id &&
         request.resource.data.created_by == resource.data.created_by &&
         request.resource.data.reward_points is int &&

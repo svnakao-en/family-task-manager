@@ -163,9 +163,9 @@ Rules = 物理的な法律（最後の砦）
 - Security Rules の hasOnly + hasAll 強化
 - approved の完全 Immutable 化
 
-### Phase 6: 運用改善機能（開発中・本番稼働中）
+### Phase 6: 運用改善機能（完了・本番稼働中）
+## 最終更新: 2026-05-14
 
-#### 完了済み
 - [x] **ステータス拡張**: `working`（作業中）ステータス追加
   - `types/index.ts` に `'working'` 追加
   - `taskUtils.ts` に色・ラベル追加
@@ -179,11 +179,25 @@ Rules = 物理的な法律（最後の砦）
   - `RejectButton` コンポーネント実装
   - Security Rules に `isValidRejection()` 追加
 
-#### 未実装（次の開発対象）
-- [ ] **確認ダイアログ**: `RejectButton` に `window.confirm` を追加
-- [ ] **物理削除**: `pending` のみ対象。親が実行。確認ダイアログ必須
-- [ ] **担当者指名**: タスク作成時に特定の子を選択可能にする
-- [ ] **タスク編集**: `pending` 時のみ、タイトル・ポイントの修正を可能にする
+- [x] **確認ダイアログ**: `RejectButton` に `window.confirm` を追加
+
+- [x] **物理削除**: `pending` のみ対象。確認ダイアログあり
+  - `deleteTask()` 実装
+  - `DeleteButton` コンポーネント実装
+  - Security Rules に `allow delete`（親のみ・pending のみ）追加
+
+- [x] **担当者指名**: タスク作成時に特定の子を選択可能
+  - `TaskForm` にセレクトボックス追加（未選択 = 先着順）
+  - 家族の子一覧を動的取得
+
+- [x] **タスク編集**: `pending` 時のみ、タイトル・説明・ポイントの修正が可能
+  - `editTask()` 実装
+  - `EditTaskForm` コンポーネント実装（インライン表示）
+  - Security Rules に `isValidEdit()` 追加
+
+- [x] **子アカウント登録バグ修正**: 新規ユーザーが子として登録できない不具合を修正
+  - `families` の get ルールを認証済みユーザー全員に開放（参加時の家族ID確認のため）
+  - `family_members` の update ルールを修正（family_id の初回設定を許可）
 
 ---
 
@@ -193,37 +207,6 @@ Rules = 物理的な法律（最後の砦）
 - **フィールド1**: `family_id` (Ascending)
 - **フィールド2**: `created_at` (Descending)
 - **クエリスコープ**: コレクション
-
----
-
-## 📋 Phase 6 残タスク詳細
-
-### 1. 確認ダイアログ（RejectButton）
-**対象**: `components/RejectButton.tsx`
-**内容**: `handleReject` 内に `window.confirm('本当に差し戻しますか？')` を追加
-
-### 2. 物理削除機能
-**対象**: `lib/taskActions.ts`、`components/TaskCard.tsx`、`firestore.rules`
-**ルール**:
-- 親のみが実行可能
-- `pending` ステータスのタスクのみ削除可能
-- 確認ダイアログ必須
-- Security Rules に `allow delete` ルール追加
-
-### 3. 担当者指名
-**対象**: `components/TaskForm.tsx`、`lib/taskActions.ts`（createTask 関数化）
-**ルール**:
-- 親が作成時に家族の子（child）を選択できる
-- 未選択の場合は `assignedTo` なし（従来通り先着順）
-- 指名された子のみ `StartButton` が表示される
-
-### 4. タスク編集
-**対象**: `lib/taskActions.ts`、`components/TaskCard.tsx`（編集フォーム）
-**ルール**:
-- 親のみが実行可能
-- `pending` ステータスのタスクのみ編集可能
-- 編集可能フィールド: `title`, `description`, `rewardPoints`
-- `approved` タスクの編集は絶対禁止
 
 ---
 

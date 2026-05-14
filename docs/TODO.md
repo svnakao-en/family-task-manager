@@ -3,19 +3,15 @@
 
 ---
 
-### Phase 6: 運用改善機能（開発中）
+### Phase 6: 運用改善機能（すべて完了 - 2026-05-14）
 
-[x] ステータス拡張: `working`（作業中）追加 → 実装済み
-
-[x] 差し戻し機能: 承認前（completed/working）を pending に戻す → 実装済み
-
-[ ] 確認ダイアログ: RejectButton に window.confirm を追加（新仕様の必須ルール）
-
-[ ] 物理削除: `pending` のみ対象。誤操作のクリーンアップ用。確認ダイアログ必須。
-
-[ ] 担当者指名: 作成時に特定の家族（child）を選択可能にする。
-
-[ ] タスク編集: `pending` 時のみ、タイトルやポイントの微調整を可能にする。
+[x] ステータス拡張: `working`（作業中）追加
+[x] 差し戻し機能: 承認前（completed/working）を pending に戻す
+[x] 確認ダイアログ: RejectButton に window.confirm を追加
+[x] 物理削除: `pending` のみ対象。確認ダイアログあり。
+[x] 担当者指名: 作成時に特定の家族（child）を選択可能。未選択で先着順。
+[x] タスク編集: `pending` 時のみ、タイトル・説明・ポイントの変更が可能。
+[x] 子アカウント登録バグ修正: Security Rules の family_id 初回設定ブロックを修正。
 
 ---
 

@@ -19,7 +19,7 @@ import { CreateRewardInput, UpdateRewardInput } from '@/types';
 const MAX_REQUIRED_POINTS = 100_000;
 
 type ParentUser = { userId: string; familyId: string; role: string };
-type ActionSuccess<T = Record<string, never>> = { success: true } & T;
+type ActionSuccess<T = Record<never, never>> = { success: true } & T;
 type ActionError = { success: false; code: string; message: string };
 
 function validateRewardInput(input: Pick<CreateRewardInput, 'title' | 'requiredPoints' | 'stock'>): ActionError | null {

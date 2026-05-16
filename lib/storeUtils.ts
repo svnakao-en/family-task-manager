@@ -79,6 +79,8 @@ export function buildExchangeData(firestoreData: unknown, docId: string): Exchan
   if (data.rejected_reason) exchange.rejectedReason = data.rejected_reason as RejectedReason;
   if (data.delivered_by) exchange.deliveredBy = data.delivered_by;
   if (data.delivered_at) exchange.deliveredAt = convertTimestamp(data.delivered_at);
+  if (data.rejected_by) exchange.rejectedBy = data.rejected_by;
+  if (data.rejected_at) exchange.rejectedAt = convertTimestamp(data.rejected_at);
 
   return exchange;
 }

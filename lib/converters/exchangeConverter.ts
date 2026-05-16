@@ -18,6 +18,8 @@ export const exchangeConverter: FirestoreDataConverter<ExchangeData> = {
     };
     if (exchange.deliveredBy !== undefined) data.delivered_by = exchange.deliveredBy;
     if (exchange.deliveredAt !== undefined) data.delivered_at = exchange.deliveredAt;
+    if (exchange.rejectedBy !== undefined) data.rejected_by = exchange.rejectedBy;
+    if (exchange.rejectedAt !== undefined) data.rejected_at = exchange.rejectedAt;
     if (exchange.rejectedReason !== undefined) data.rejected_reason = exchange.rejectedReason;
     return data;
   },

@@ -110,7 +110,7 @@ export interface RewardData {
 
 /**
  * 交換履歴データ型（フロントエンド用・camelCase）
- * 監査ログは delivered/rejected 共通で deliveredBy / deliveredAt に集約
+ * 監査ログは操作の種類ごとに分離：承認 → deliveredBy/At、却下 → rejectedBy/At
  */
 export interface ExchangeData {
   exchangeId: string;
@@ -122,8 +122,10 @@ export interface ExchangeData {
   status: ExchangeStatus;
   rejectedReason?: RejectedReason;
   requestedBy: string;
-  deliveredBy?: string;     // 承認・却下いずれも処理した親のuserId
-  deliveredAt?: Date;       // 承認・却下いずれも処理日時
+  deliveredBy?: string;     // 承認した親のuserId（監査ログ）
+  deliveredAt?: Date;       // 承認日時
+  rejectedBy?: string;      // 却下した親のuserId（監査ログ）
+  rejectedAt?: Date;        // 却下日時
   createdAt: Date;
   updatedAt: Date;
 }
@@ -144,7 +146,7 @@ export interface FirestoreRewardDocument {
 
 /**
  * Firestore の exchanges コレクションのドキュメント型
- * 監査ログは delivered/rejected 共通で delivered_by / delivered_at に集約
+ * 監査ログは操作の種類ごとに分離：承認 → delivered_by/at、却下 → rejected_by/at
  */
 export interface FirestoreExchangeDocument {
   family_id: string;
@@ -157,6 +159,8 @@ export interface FirestoreExchangeDocument {
   requested_by: string;
   delivered_by?: string;
   delivered_at?: any;
+  rejected_by?: string;
+  rejected_at?: any;
   created_at: any;
   updated_at: any;
 }

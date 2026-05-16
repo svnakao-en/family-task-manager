@@ -210,12 +210,13 @@ export async function rejectExchange(
       });
 
       // Write: ステータスを rejected に確定
-      // 監査ログは世界線規約通り delivered_by / delivered_at に統一
+      // 監査ログは delivered（承認）と rejected（却下）で分離して記録
       const exchangeRawRef = doc(db, 'exchanges', exchangeId);
       transaction.update(exchangeRawRef, {
         status: 'rejected',
-        delivered_by: parentUser.userId,
-        delivered_at: serverTimestamp(),
+        rejected_reason: 'parent_rejected',
+        rejected_by: parentUser.userId,
+        rejected_at: serverTimestamp(),
         updated_at: serverTimestamp(),
       });
     });

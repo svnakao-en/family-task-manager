@@ -82,16 +82,17 @@ export interface ExchangeData {
   familyId: string;
   rewardId: string;
   rewardTitle: string;      // マスター変更時のスナップショット保全
+  childName: string;        // 申請時スナップショット（N+1防止・非正規化）
   requiredPoints: number;   // 交換時点の消費ポイントスナップショット
   status: ExchangeStatus;
   rejectedReason?: RejectedReason;
   requestedBy: string;      // 子のuserId
   deliveredBy?: string;     // 承認した親のuserId（監査ログ）
+  deliveredAt?: Date;       // 承認日時
   rejectedBy?: string;      // 却下した親のuserId（監査ログ）
+  rejectedAt?: Date;        // 却下日時
   createdAt: Date;
   updatedAt: Date;
-  deliveredAt?: Date;
-  rejectedAt?: Date;
 }
 ```
 
@@ -134,20 +135,20 @@ export interface FirestoreRewardDocument {
 ### FirestoreExchangeDocument（Phase 8 追加）
 ```typescript
 export interface FirestoreExchangeDocument {
-  exchange_id: string;
   family_id: string;
   reward_id: string;
   reward_title: string;
+  child_name: string;        // 申請時スナップショット（N+1防止）
   required_points: number;
   status: ExchangeStatus;
   rejected_reason?: RejectedReason;
   requested_by: string;
-  delivered_by?: string;
-  rejected_by?: string;
+  delivered_by?: string;     // 承認した親のuserId
+  delivered_at?: Timestamp;  // 承認日時
+  rejected_by?: string;      // 却下した親のuserId
+  rejected_at?: Timestamp;   // 却下日時
   created_at: Timestamp;
   updated_at: Timestamp;
-  delivered_at?: Timestamp;
-  rejected_at?: Timestamp;
 }
 ```
 
@@ -176,7 +177,7 @@ Rules = 物理的な法律（最後の砦）
 
 **第2層: ロジック層（Transaction ＆ 状態機械）**
 - セッション風化・DevTools改ざん対策: フロントから渡される `currentUser` のロールや家族IDを盲信せず、Transaction内部でFirestoreから最新の `UserData` を再取得して権限を二重検証する
-- リトライ耐性: 在庫・ポイントの増減には `increment()` を使用し、パケット再送時の競合を完全防御する
+- リトライ・競合耐性: 在庫・ポイントの増減は、必ず `runTransaction` 内部で最新値を Read（事前取得）し、算術演算を行った値を Write（上書き）する「Read-before-Write」を徹底し、パケット再送時の競合を完全防御する（**Transaction内での `FieldValue.increment()` の使用は禁止**）
 - 二重処理・ポイント無限増殖の防止: `assertExchangeTransition()` による状態遷移の厳密固定
 
 **第3層: UI層**
@@ -189,9 +190,9 @@ Rules = 物理的な法律（最後の砦）
 1. `user.uid` の使用禁止 → 必ず `user.userId` を参照
 2. レンダリング中の副作用禁止 → 必ず `useEffect` を使用
 3. バリデーションなしのDB書き込み禁止
-4. 勝手な最適化・共通化の禁止:
-   - `Transaction` を `writeBatch` に戻すこと
-   - 整合性検証のための事前 `get` を省略すること
+4. **勝手な最適化・共通化の禁止（重要）**:
+   - 処理の軽量化を言い訳に、勝手に `Transaction` を `writeBatch` へ格下げ・変更する行為の禁止
+   - 整合性検証のための事前 `get`（Read Phase）を省略する行為の禁止
 5. **ご褒美の物理削除禁止**: 過去の交換履歴破壊を防ぐため、必ず論理削除（`is_active = false`）を徹底すること
 6. **不変状態の逆流禁止**: `approved` タスク、および `delivered` / `rejected` の交換申請は、いかなる理由があっても二度とステータスを変更してはならない
 7. **二重返金ガードの省略禁止**: `rejectExchange` 時、対象の申請が `requested` であることのチェックを絶対に省いてはならない（ポイント増殖バグ防止）

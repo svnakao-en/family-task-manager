@@ -179,6 +179,7 @@ Rules = 物理的な法律（最後の砦）
 - セッション風化・DevTools改ざん対策: フロントから渡される `currentUser` のロールや家族IDを盲信せず、Transaction内部でFirestoreから最新の `UserData` を再取得して権限を二重検証する
 - リトライ・競合耐性: 在庫・ポイントの増減は、必ず `runTransaction` 内部で最新値を Read（事前取得）し、算術演算を行った値を Write（上書き）する「Read-before-Write」を徹底し、パケット再送時の競合を完全防御する（**Transaction内での `FieldValue.increment()` の使用は禁止**）
 - 二重処理・ポイント無限増殖の防止: `assertExchangeTransition()` による状態遷移の厳密固定
+- **NaNおよび異常値の完全遮断**: フロントのバリデーションを過信せず、Server Actionの入り口で `!Number.isFinite(val) || val <= 0` による厳格な数値チェックを実行し、不正な値がDB（Firestore）に1文字たりとも侵入しないよう物理遮断する。
 
 **第3層: UI層**
 - 状態に応じたローディング（Disabled）制御、連打による重複申請の防止
@@ -196,6 +197,8 @@ Rules = 物理的な法律（最後の砦）
 5. **ご褒美の物理削除禁止**: 過去の交換履歴破壊を防ぐため、必ず論理削除（`is_active = false`）を徹底すること
 6. **不変状態の逆流禁止**: `approved` タスク、および `delivered` / `rejected` の交換申請は、いかなる理由があっても二度とステータスを変更してはならない
 7. **二重返金ガードの省略禁止**: `rejectExchange` 時、対象の申請が `requested` であることのチェックを絶対に省いてはならない（ポイント増殖バグ防止）
+8. **型キャスト `Number()` の単発使用の禁止**: フォーム入力を数値化する際、単に `Number(form.value)` と書いてはならない。空欄（`''`）の時に `0` に化けるリスクを排除するため、必ず `form.value === '' ? undefined : Number(form.value)` を徹底すること。
+9. **型定義における過度な `Omit/Pick` の禁止**: データの入力層（フォーム等）においては、`Omit<RewardData, ...>` を使用せず、独立した入力DTO型（例: `CreateRewardInput`）を明示的に定義し、AIの誤読と型の腐食を防止すること。
 
 ---
 

@@ -90,8 +90,10 @@ export function useStoreProducts(childUser: UserData): UseStoreProductsResult {
     );
 
     // --- Stream 2: 自分の申請中のみ（status: requested）---
+    // family_id フィルターはセキュリティルールの belongsToFamily() との整合性に必須
     const exchangesQuery = query(
       collection(db, 'exchanges').withConverter(exchangeConverter),
+      where('family_id', '==', childUser.familyId),
       where('requested_by', '==', childUser.userId),
       where('status', '==', 'requested')
     );

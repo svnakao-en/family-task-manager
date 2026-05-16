@@ -32,7 +32,7 @@ export interface StoreProduct {
   title: string;
   description?: string;
   requiredPoints: number;
-  stock?: number;
+  stock?: number | null;
   cardState: RewardCardState;
   pendingExchangeId?: string;
 }
@@ -145,7 +145,7 @@ export function useStoreProducts(childUser: UserData): UseStoreProductsResult {
     let cardState: RewardCardState;
     if (pendingExchangeId) {
       cardState = 'pending';
-    } else if (reward.stock !== undefined && reward.stock <= 0) {
+    } else if (reward.stock != null && reward.stock <= 0) {
       cardState = 'sold_out';
     } else if (walletBalance < reward.requiredPoints) {
       cardState = 'insufficient';

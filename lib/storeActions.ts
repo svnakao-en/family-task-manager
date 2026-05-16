@@ -54,7 +54,7 @@ export async function createExchange(
 
       if (!rewardData.isActive) throw new Error('このご褒美は現在利用できません');
       if (rewardData.familyId !== childUser.familyId) throw new Error('権限がありません');
-      if (rewardData.stock !== undefined && rewardData.stock <= 0) {
+      if (rewardData.stock != null && rewardData.stock <= 0) {
         throw new Error('申し訳ありません、売り切れです');
       }
 
@@ -132,12 +132,12 @@ export async function deliverExchange(
       const rewardData = rewardSnap.data();
 
       // 在庫チェック（承認時点での最終確認）
-      if (rewardData.stock !== undefined && rewardData.stock <= 0) {
+      if (rewardData.stock != null && rewardData.stock <= 0) {
         throw new Error('在庫切れのため引き渡しできません');
       }
 
       // Write: 在庫を減算（在庫管理がある場合のみ）
-      if (rewardData.stock !== undefined) {
+      if (rewardData.stock != null) {
         // update は converter を経由しないため raw ref で更新
         const rewardRawRef = doc(db, 'rewards', exchangeData.rewardId);
         transaction.update(rewardRawRef, {

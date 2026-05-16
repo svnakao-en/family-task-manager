@@ -50,8 +50,11 @@ service cloud.firestore {
     // users コレクション
     // ========================================
     match /users/{userId} {
-      // 読み取り: ログイン中、かつ自分のドキュメントのみ（onSnapshot ウォレット残高表示に必要）
-      allow read: if request.auth != null && request.auth.uid == userId;
+      // 読み取り: 自分のドキュメント、または同一家族の親（履歴ページの担当者名表示に必要）
+      allow read: if request.auth != null && (
+        request.auth.uid == userId ||
+        (isParent() && getUserFamilyId(userId) == getFamilyId())
+      );
 
       // 自分のデータのみ作成可能
       allow create: if isAuthenticated() &&

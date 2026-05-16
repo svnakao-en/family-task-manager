@@ -295,7 +295,7 @@ service cloud.firestore {
         request.resource.data.status == 'requested' &&
         request.resource.data.requested_by == request.auth.uid &&
         request.resource.data.keys().hasAll([
-          'family_id', 'reward_id', 'reward_title',
+          'family_id', 'reward_id', 'reward_title', 'child_name',
           'required_points', 'status', 'requested_by',
           'created_at', 'updated_at'
         ]);

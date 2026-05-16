@@ -3,9 +3,8 @@
 /**
  * 親向け：交換申請キュー（FIFOソート保証）ストリームフック
  *
- * - requested_at の asc（古いおねがい順）でサーバーソートを強制
- * - 子供の名前を一括Readして合成
- * - isReady フラグでハングアップを防止
+ * child_name が exchange ドキュメントに非正規化されているため、
+ * 個別の users 読み取りは不要（N+1 問題を解消済み）
  */
 
 import { useState, useEffect } from 'react';
@@ -15,24 +14,19 @@ import {
   where,
   orderBy,
   onSnapshot,
-  getDocs,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { UserData, ExchangeData } from '@/types';
-import { buildExchangeData } from '@/lib/storeUtils';
-
-export interface ExchangeWithChildName extends ExchangeData {
-  childName: string;
-}
+import { exchangeConverter } from '@/lib/converters/exchangeConverter';
 
 interface UseApprovalQueueResult {
-  queue: ExchangeWithChildName[];
+  queue: ExchangeData[];
   isReady: boolean;
   error: string | null;
 }
 
 export function useApprovalQueue(parentUser: UserData): UseApprovalQueueResult {
-  const [queue, setQueue] = useState<ExchangeWithChildName[]>([]);
+  const [queue, setQueue] = useState<ExchangeData[]>([]);
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,7 +34,7 @@ export function useApprovalQueue(parentUser: UserData): UseApprovalQueueResult {
     if (!parentUser.familyId) return;
 
     const exchangesQuery = query(
-      collection(db, 'exchanges'),
+      collection(db, 'exchanges').withConverter(exchangeConverter),
       where('family_id', '==', parentUser.familyId),
       where('status', '==', 'requested'),
       orderBy('created_at', 'asc') // FIFO: 古いお願い順
@@ -48,40 +42,12 @@ export function useApprovalQueue(parentUser: UserData): UseApprovalQueueResult {
 
     const unsubscribe = onSnapshot(
       exchangesQuery,
-      async (snap) => {
+      (snap) => {
         const exchanges: ExchangeData[] = [];
         snap.forEach((d) => {
-          try { exchanges.push(buildExchangeData(d.data(), d.id)); } catch { /* スキップ */ }
+          try { exchanges.push(d.data()); } catch { /* 不正データはスキップ */ }
         });
-
-        // 子供の名前を一括取得
-        const uniqueChildIds = Array.from(new Set(exchanges.map((e) => e.requestedBy)));
-        const nameMap = new Map<string, string>();
-
-        if (uniqueChildIds.length > 0) {
-          try {
-            // Firestore in() は最大10件まで
-            const chunks = chunkArray(uniqueChildIds, 10);
-            for (const chunk of chunks) {
-              const usersSnap = await getDocs(
-                query(
-                  collection(db, 'users'),
-                  where('__name__', 'in', chunk)
-                )
-              );
-              usersSnap.forEach((d) => {
-                nameMap.set(d.id, (d.data().name as string) ?? '不明');
-              });
-            }
-          } catch { /* 名前取得失敗時は「不明」で継続 */ }
-        }
-
-        setQueue(
-          exchanges.map((e) => ({
-            ...e,
-            childName: nameMap.get(e.requestedBy) ?? '不明',
-          }))
-        );
+        setQueue(exchanges);
         setIsReady(true);
       },
       () => {
@@ -94,12 +60,4 @@ export function useApprovalQueue(parentUser: UserData): UseApprovalQueueResult {
   }, [parentUser.familyId]);
 
   return { queue, isReady, error };
-}
-
-function chunkArray<T>(arr: T[], size: number): T[][] {
-  const result: T[][] = [];
-  for (let i = 0; i < arr.length; i += size) {
-    result.push(arr.slice(i, i + size));
-  }
-  return result;
 }

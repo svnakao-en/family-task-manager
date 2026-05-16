@@ -110,22 +110,22 @@ export interface RewardData {
 
 /**
  * 交換履歴データ型（フロントエンド用・camelCase）
+ * 監査ログは delivered/rejected 共通で deliveredBy / deliveredAt に集約
  */
 export interface ExchangeData {
   exchangeId: string;
   familyId: string;
   rewardId: string;
   rewardTitle: string;
+  childName: string;        // 申請時スナップショット（N+1防止）
   requiredPoints: number;
   status: ExchangeStatus;
   rejectedReason?: RejectedReason;
   requestedBy: string;
-  deliveredBy?: string;
-  rejectedBy?: string;
+  deliveredBy?: string;     // 承認・却下いずれも処理した親のuserId
+  deliveredAt?: Date;       // 承認・却下いずれも処理日時
   createdAt: Date;
   updatedAt: Date;
-  deliveredAt?: Date;
-  rejectedAt?: Date;
 }
 
 /**
@@ -144,21 +144,21 @@ export interface FirestoreRewardDocument {
 
 /**
  * Firestore の exchanges コレクションのドキュメント型
+ * 監査ログは delivered/rejected 共通で delivered_by / delivered_at に集約
  */
 export interface FirestoreExchangeDocument {
   family_id: string;
   reward_id: string;
   reward_title: string;
+  child_name: string;
   required_points: number;
   status: ExchangeStatus;
   rejected_reason?: RejectedReason;
   requested_by: string;
   delivered_by?: string;
-  rejected_by?: string;
+  delivered_at?: any;
   created_at: any;
   updated_at: any;
-  delivered_at?: any;
-  rejected_at?: any;
 }
 
 // Made with Bob

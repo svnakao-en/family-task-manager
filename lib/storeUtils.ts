@@ -68,6 +68,7 @@ export function buildExchangeData(firestoreData: unknown, docId: string): Exchan
     familyId: data.family_id,
     rewardId: data.reward_id,
     rewardTitle: data.reward_title,
+    childName: data.child_name ?? '',
     requiredPoints: Number(data.required_points),
     status: data.status as ExchangeStatus,
     requestedBy: data.requested_by,
@@ -77,9 +78,7 @@ export function buildExchangeData(firestoreData: unknown, docId: string): Exchan
 
   if (data.rejected_reason) exchange.rejectedReason = data.rejected_reason as RejectedReason;
   if (data.delivered_by) exchange.deliveredBy = data.delivered_by;
-  if (data.rejected_by) exchange.rejectedBy = data.rejected_by;
   if (data.delivered_at) exchange.deliveredAt = convertTimestamp(data.delivered_at);
-  if (data.rejected_at) exchange.rejectedAt = convertTimestamp(data.rejected_at);
 
   return exchange;
 }

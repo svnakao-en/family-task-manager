@@ -1,13 +1,12 @@
 "use client";
 
 import { useState } from 'react';
-import { ExchangeWithChildName } from '@/hooks/useApprovalQueue';
 import { deliverExchange, rejectExchange } from '@/lib/storeActions';
-import { UserData } from '@/types';
+import { UserData, ExchangeData } from '@/types';
 import { formatTimeAgo } from '@/lib/storeUtils';
 
 interface ApprovalCardProps {
-  exchange: ExchangeWithChildName;
+  exchange: ExchangeData;
   currentUser: UserData;
   onError?: (msg: string) => void;
 }

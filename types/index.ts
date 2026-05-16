@@ -86,4 +86,79 @@ export interface FirestoreTaskDocument {
   approved_at?: any; // Firestore Timestamp
 }
 
+// ==============================
+// ご褒美ストア（Phase 8）
+// ==============================
+
+export type ExchangeStatus = 'requested' | 'delivered' | 'rejected';
+export type RejectedReason = 'parent_rejected' | 'out_of_stock';
+
+/**
+ * ご褒美マスターデータ型（フロントエンド用・camelCase）
+ */
+export interface RewardData {
+  rewardId: string;
+  familyId: string;
+  title: string;
+  description?: string;
+  requiredPoints: number;
+  stock?: number;          // 未設定=無限、0=売り切れ
+  isActive: boolean;       // 論理削除フラグ
+  createdBy: string;
+  createdAt: Date;
+}
+
+/**
+ * 交換履歴データ型（フロントエンド用・camelCase）
+ */
+export interface ExchangeData {
+  exchangeId: string;
+  familyId: string;
+  rewardId: string;
+  rewardTitle: string;
+  requiredPoints: number;
+  status: ExchangeStatus;
+  rejectedReason?: RejectedReason;
+  requestedBy: string;
+  deliveredBy?: string;
+  rejectedBy?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  deliveredAt?: Date;
+  rejectedAt?: Date;
+}
+
+/**
+ * Firestore の rewards コレクションのドキュメント型
+ */
+export interface FirestoreRewardDocument {
+  family_id: string;
+  title: string;
+  description?: string;
+  required_points: number;
+  stock?: number;
+  is_active: boolean;
+  created_by: string;
+  created_at: any;
+}
+
+/**
+ * Firestore の exchanges コレクションのドキュメント型
+ */
+export interface FirestoreExchangeDocument {
+  family_id: string;
+  reward_id: string;
+  reward_title: string;
+  required_points: number;
+  status: ExchangeStatus;
+  rejected_reason?: RejectedReason;
+  requested_by: string;
+  delivered_by?: string;
+  rejected_by?: string;
+  created_at: any;
+  updated_at: any;
+  delivered_at?: any;
+  rejected_at?: any;
+}
+
 // Made with Bob

@@ -71,12 +71,20 @@ service cloud.firestore {
           !request.resource.data.diff(resource.data)
             .affectedKeys().hasAny(['total_reward'])
         ) ||
-        // ケース2: 親による total_reward 更新（タスク承認時のみ）
+        // ケース2: 親による total_reward 更新（タスク承認・交換返金）
         (
           isParent() &&
           getUserFamilyId(userId) == getFamilyId() &&
           request.resource.data.diff(resource.data)
             .affectedKeys().hasOnly(['total_reward'])
+        ) ||
+        // ケース3: 子による total_reward 減算（ご褒美交換申請時のポイント確保）
+        (
+          isChild() &&
+          request.auth.uid == userId &&
+          request.resource.data.diff(resource.data)
+            .affectedKeys().hasOnly(['total_reward']) &&
+          request.resource.data.total_reward >= 0
         )
       );
 
@@ -241,6 +249,70 @@ service cloud.firestore {
         request.resource.data.family_id == resource.data.family_id &&
         request.resource.data.reward_points == resource.data.reward_points
       );
+    }
+
+
+    // ========================================
+    // rewards コレクション（ご褒美マスター）
+    // ========================================
+    match /rewards/{rewardId} {
+      // 読み取り: 同じ家族のメンバーのみ
+      allow read: if isAuthenticated() &&
+        belongsToFamily(resource.data.family_id);
+
+      // 作成: 親のみ
+      allow create: if isAuthenticated() &&
+        isParent() &&
+        belongsToFamily(request.resource.data.family_id) &&
+        request.resource.data.created_by == request.auth.uid &&
+        request.resource.data.required_points is int &&
+        request.resource.data.required_points > 0 &&
+        request.resource.data.is_active == true;
+
+      // 更新: 親のみ（論理削除・編集を含む）
+      allow update: if isAuthenticated() &&
+        isParent() &&
+        belongsToFamily(resource.data.family_id) &&
+        request.resource.data.family_id == resource.data.family_id &&
+        request.resource.data.created_by == resource.data.created_by;
+
+      // 物理削除禁止（過去の交換履歴保護）
+      allow delete: if false;
+    }
+
+    // ========================================
+    // exchanges コレクション（交換履歴）
+    // ========================================
+    match /exchanges/{exchangeId} {
+      // 読み取り: 同じ家族のメンバーのみ
+      allow read: if isAuthenticated() &&
+        belongsToFamily(resource.data.family_id);
+
+      // 作成: 子供のみ（申請）
+      allow create: if isAuthenticated() &&
+        isChild() &&
+        belongsToFamily(request.resource.data.family_id) &&
+        request.resource.data.status == 'requested' &&
+        request.resource.data.requested_by == request.auth.uid &&
+        request.resource.data.keys().hasAll([
+          'family_id', 'reward_id', 'reward_title',
+          'required_points', 'status', 'requested_by',
+          'created_at', 'updated_at'
+        ]);
+
+      // 更新: 親のみ（deliver/reject）
+      // 状態遷移は requested → delivered または rejected のみ
+      allow update: if isAuthenticated() &&
+        isParent() &&
+        belongsToFamily(resource.data.family_id) &&
+        resource.data.status == 'requested' &&
+        (request.resource.data.status == 'delivered' ||
+          request.resource.data.status == 'rejected') &&
+        request.resource.data.requested_by == resource.data.requested_by &&
+        request.resource.data.required_points == resource.data.required_points;
+
+      // 削除禁止（監査ログ保護）
+      allow delete: if false;
     }
 
   }

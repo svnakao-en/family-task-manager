@@ -55,7 +55,7 @@ export function useApprovalQueue(parentUser: UserData): UseApprovalQueueResult {
         });
 
         // 子供の名前を一括取得
-        const uniqueChildIds = [...new Set(exchanges.map((e) => e.requestedBy))];
+        const uniqueChildIds = Array.from(new Set(exchanges.map((e) => e.requestedBy)));
         const nameMap = new Map<string, string>();
 
         if (uniqueChildIds.length > 0) {

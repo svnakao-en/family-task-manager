@@ -19,16 +19,20 @@ import { db } from '@/lib/firebase';
 import { UserData, ExchangeData } from '@/types';
 import { exchangeConverter } from '@/lib/converters/exchangeConverter';
 
+export interface ApprovalQueueErrors {
+  exchanges?: boolean;
+}
+
 interface UseApprovalQueueResult {
   queue: ExchangeData[];
   isReady: boolean;
-  error: string | null;
+  error: ApprovalQueueErrors | null;
 }
 
 export function useApprovalQueue(parentUser: UserData): UseApprovalQueueResult {
   const [queue, setQueue] = useState<ExchangeData[]>([]);
   const [isReady, setIsReady] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [streamErrors, setStreamErrors] = useState<ApprovalQueueErrors>({});
 
   useEffect(() => {
     if (!parentUser.familyId) return;
@@ -43,21 +47,19 @@ export function useApprovalQueue(parentUser: UserData): UseApprovalQueueResult {
     const unsubscribe = onSnapshot(
       exchangesQuery,
       (snap) => {
-        const exchanges: ExchangeData[] = [];
-        snap.forEach((d) => {
-          try { exchanges.push(d.data()); } catch { /* 不正データはスキップ */ }
-        });
-        setQueue(exchanges);
+        setQueue(snap.docs.map((d) => d.data()));
         setIsReady(true);
       },
-      () => {
+      (err) => {
+        console.error('ApprovalQueue Stream エラー:', err);
         setIsReady(true);
-        setError('申請一覧の読み込みに失敗しました');
+        setStreamErrors((prev) => ({ ...prev, exchanges: true }));
       }
     );
 
     return () => unsubscribe();
   }, [parentUser.familyId]);
 
-  return { queue, isReady, error };
+  const hasError = Object.keys(streamErrors).length > 0;
+  return { queue, isReady, error: hasError ? streamErrors : null };
 }

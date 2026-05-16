@@ -106,7 +106,7 @@ export default function StorePage() {
         ← もどる
       </button>
 
-      {/* エラー表示 */}
+      {/* エラー表示（ストリームごとに原因を特定） */}
       {error && (
         <div
           style={{
@@ -119,7 +119,10 @@ export default function StorePage() {
             color: '#856404',
           }}
         >
-          {error}
+          電波のいいところで、もういちどためしてね
+          {error.rewards && <div>・ご褒美リストの読み込みに失敗しました</div>}
+          {error.exchanges && <div>・申請状況の読み込みに失敗しました</div>}
+          {error.wallet && <div>・ポイント残高の読み込みに失敗しました</div>}
         </div>
       )}
 

@@ -1,13 +1,14 @@
 "use client";
 
 /**
- * 子供向け：ご褒美ストアの3ストリーム合成フック
+ * 子供向け：ご褒美ストアの3ストリーム合成フック（要塞化版）
  *
- * Stream 1: rewards（家族のアクティブなご褒美一覧）
+ * Stream 1: rewards（家族のアクティブなご褒美一覧・新しい順）
  * Stream 2: exchanges（自分の申請中exchangeのみ）
  * Stream 3: users（自分のリアルタイム残高ウォレット）
  *
- * 各ストリームにReadyフラグを設け、一部が遅れても画面がハングアップしないよう設計。
+ * 各ストリームに独立したReadyフラグとエラーフラグを持ち、
+ * 一部が遅れても画面がハングアップしない設計。
  */
 
 import { useState, useEffect } from 'react';
@@ -16,11 +17,13 @@ import {
   doc,
   query,
   where,
+  orderBy,
   onSnapshot,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { UserData, RewardData, ExchangeData } from '@/types';
-import { buildRewardData, buildExchangeData } from '@/lib/storeUtils';
+import { rewardConverter } from '@/lib/converters/rewardConverter';
+import { exchangeConverter } from '@/lib/converters/exchangeConverter';
 
 export type RewardCardState = 'available' | 'pending' | 'sold_out' | 'insufficient';
 
@@ -31,14 +34,20 @@ export interface StoreProduct {
   requiredPoints: number;
   stock?: number;
   cardState: RewardCardState;
-  pendingExchangeId?: string; // 申請中の場合のexchangeId（取り消しUI用）
+  pendingExchangeId?: string;
+}
+
+export interface StreamErrors {
+  rewards?: boolean;
+  exchanges?: boolean;
+  wallet?: boolean;
 }
 
 interface UseStoreProductsResult {
   products: StoreProduct[];
   walletBalance: number;
   isReady: boolean;
-  error: string | null;
+  error: StreamErrors | null;
 }
 
 export function useStoreProducts(childUser: UserData): UseStoreProductsResult {
@@ -49,41 +58,40 @@ export function useStoreProducts(childUser: UserData): UseStoreProductsResult {
   const [rewardsReady, setRewardsReady] = useState(false);
   const [exchangesReady, setExchangesReady] = useState(false);
   const [walletReady, setWalletReady] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [streamErrors, setStreamErrors] = useState<StreamErrors>({});
 
   useEffect(() => {
     if (!childUser.familyId || !childUser.userId) return;
 
     const unsubscribers: (() => void)[] = [];
 
-    // --- Stream 1: アクティブなご褒美一覧 ---
+    // --- Stream 1: アクティブなご褒美一覧（新しい順）---
+    // withConverter で DocumentData(any) を完全追放
+    // ※ family_id + is_active + created_at の複合インデックスが Firebase Console で必要
     const rewardsQuery = query(
-      collection(db, 'rewards'),
+      collection(db, 'rewards').withConverter(rewardConverter),
       where('family_id', '==', childUser.familyId),
-      where('is_active', '==', true)
+      where('is_active', '==', true),
+      orderBy('created_at', 'desc')
     );
     unsubscribers.push(
       onSnapshot(
         rewardsQuery,
         (snap) => {
-          const data: RewardData[] = [];
-          snap.forEach((d) => {
-            try { data.push(buildRewardData(d.data(), d.id)); } catch { /* 不正データはスキップ */ }
-          });
-          setRewards(data);
+          setRewards(snap.docs.map((d) => d.data()));
           setRewardsReady(true);
         },
-        () => {
-          // エラー時もReadyにして画面フリーズを防ぐ
+        (err) => {
+          console.error('Rewards Stream エラー:', err);
           setRewardsReady(true);
-          setError('ご褒美の読み込みに失敗しました');
+          setStreamErrors((prev) => ({ ...prev, rewards: true }));
         }
       )
     );
 
-    // --- Stream 2: 自分の申請中のみ（status: requested） ---
+    // --- Stream 2: 自分の申請中のみ（status: requested）---
     const exchangesQuery = query(
-      collection(db, 'exchanges'),
+      collection(db, 'exchanges').withConverter(exchangeConverter),
       where('requested_by', '==', childUser.userId),
       where('status', '==', 'requested')
     );
@@ -91,16 +99,13 @@ export function useStoreProducts(childUser: UserData): UseStoreProductsResult {
       onSnapshot(
         exchangesQuery,
         (snap) => {
-          const data: ExchangeData[] = [];
-          snap.forEach((d) => {
-            try { data.push(buildExchangeData(d.data(), d.id)); } catch { /* スキップ */ }
-          });
-          setPendingExchanges(data);
+          setPendingExchanges(snap.docs.map((d) => d.data()));
           setExchangesReady(true);
         },
-        () => {
+        (err) => {
+          console.error('Exchanges Stream エラー:', err);
           setExchangesReady(true);
-          setError('申請状況の読み込みに失敗しました');
+          setStreamErrors((prev) => ({ ...prev, exchanges: true }));
         }
       )
     );
@@ -116,9 +121,10 @@ export function useStoreProducts(childUser: UserData): UseStoreProductsResult {
           }
           setWalletReady(true);
         },
-        () => {
+        (err) => {
+          console.error('Wallet Stream エラー:', err);
           setWalletReady(true);
-          // 残高取得失敗時はセッションの値を維持（フリーズ防止）
+          setStreamErrors((prev) => ({ ...prev, wallet: true }));
         }
       )
     );
@@ -126,8 +132,8 @@ export function useStoreProducts(childUser: UserData): UseStoreProductsResult {
     return () => { unsubscribers.forEach((unsub) => unsub()); };
   }, [childUser.familyId, childUser.userId]);
 
-  // --- ViewModel合成 ---
-  const pendingByRewardId = new Map(
+  // --- ViewModel合成（純粋ロジック・100%型安全）---
+  const pendingByRewardId = new Map<string, string>(
     pendingExchanges.map((e) => [e.rewardId, e.exchangeId])
   );
 
@@ -156,10 +162,12 @@ export function useStoreProducts(childUser: UserData): UseStoreProductsResult {
     };
   });
 
+  const hasError = Object.keys(streamErrors).length > 0;
+
   return {
     products,
     walletBalance,
     isReady: rewardsReady && exchangesReady && walletReady,
-    error,
+    error: hasError ? streamErrors : null,
   };
 }

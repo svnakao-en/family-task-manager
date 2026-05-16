@@ -79,7 +79,7 @@ export default function StoreRequestsPage() {
             color: '#856404',
           }}
         >
-          {error}
+          申請一覧の読み込みに失敗しました。画面を再読み込みしてください。
         </div>
       )}
 

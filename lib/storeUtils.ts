@@ -43,6 +43,7 @@ export function buildRewardData(firestoreData: unknown, docId: string): RewardDa
     title: data.title,
     requiredPoints,
     isActive: Boolean(data.is_active),
+    isDeleted: Boolean(data.is_deleted),
     version: typeof data.version === 'number' ? data.version : 0,
     createdBy: data.created_by,
     createdAt: convertTimestamp(data.created_at),

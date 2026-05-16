@@ -103,10 +103,27 @@ export interface RewardData {
   description?: string;
   requiredPoints: number;
   stock?: number | null;   // undefined/null=無限、0=売り切れ
-  isActive: boolean;       // 論理削除フラグ
-  version: number;         // 楽観的排他制御用バージョン
+  isActive: boolean;
+  isDeleted: boolean;      // 論理削除（過去履歴保護のため物理削除禁止）
+  version: number;         // 楽観的排他制御用バージョン（更新時 FieldValue.increment(1)）
   createdBy: string;
   createdAt: Date;
+}
+
+// 親CRUD入力DTO（Omit/Pick 禁止ルール#9のため独立型として定義）
+export interface CreateRewardInput {
+  title: string;
+  description?: string;
+  requiredPoints: number;
+  stock?: number | null;
+}
+
+export interface UpdateRewardInput {
+  title?: string;
+  description?: string;
+  requiredPoints?: number;
+  stock?: number | null;
+  isActive?: boolean;
 }
 
 /**
@@ -141,10 +158,13 @@ export interface FirestoreRewardDocument {
   required_points: number;
   stock?: number | null;   // null=無限、0=売り切れ
   is_active: boolean;
+  is_deleted: boolean;     // 論理削除フラグ（物理削除禁止）
   version: number;         // 更新時は Transaction 内で FieldValue.increment(1)
   created_by: string;
   created_at: any;
   updated_at?: any;
+  deleted_at?: any;
+  deleted_by?: string;
 }
 
 // ==============================

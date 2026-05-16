@@ -139,7 +139,7 @@ export function useStoreProducts(childUser: UserData): UseStoreProductsResult {
     pendingExchanges.map((e) => [e.rewardId, e.exchangeId])
   );
 
-  const products: StoreProduct[] = rewards.map((reward) => {
+  const products: StoreProduct[] = rewards.filter((reward) => !reward.isDeleted).map((reward) => {
     const pendingExchangeId = pendingByRewardId.get(reward.rewardId);
 
     let cardState: RewardCardState;

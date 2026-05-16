@@ -11,6 +11,7 @@
 
 import { adminDb } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
+import { revalidateTag } from 'next/cache';
 import { randomUUID } from 'crypto';
 import { ImmediateExchangeResult } from '@/types';
 
@@ -114,6 +115,10 @@ export async function createImmediateExchange(
       }
       const rewardData = rewardSnap.data()!;
 
+      // 論理削除チェック（セキュリティ上、削除済みは存在しないものとして扱う）
+      if (rewardData.is_deleted === true) {
+        throw Object.assign(new Error('REWARD_NOT_FOUND'), { code: 'REWARD_NOT_FOUND' });
+      }
       if (!rewardData.is_active) {
         throw Object.assign(new Error('REWARD_INACTIVE'), { code: 'REWARD_INACTIVE' });
       }
@@ -196,6 +201,8 @@ export async function createImmediateExchange(
     });
 
     console.log({ ...logBase, transactionPhase: 'transaction_complete', result: 'success', errorCode: '' });
+    // 在庫減算後、家族内キャッシュを強制パージ（城外）
+    revalidateTag(`rewards:${childUser.familyId}`);
     return txResult;
 
   } catch (err: unknown) {

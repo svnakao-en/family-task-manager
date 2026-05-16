@@ -43,12 +43,14 @@ export function buildRewardData(firestoreData: unknown, docId: string): RewardDa
     title: data.title,
     requiredPoints,
     isActive: Boolean(data.is_active),
+    version: typeof data.version === 'number' ? data.version : 0,
     createdBy: data.created_by,
     createdAt: convertTimestamp(data.created_at),
   };
 
   if (data.description) reward.description = data.description;
-  if (data.stock !== undefined) reward.stock = Number(data.stock);
+  // stock: null/undefined = 無限、数値 = 在庫数
+  if (data.stock !== undefined) reward.stock = data.stock === null ? null : Number(data.stock);
 
   return reward;
 }

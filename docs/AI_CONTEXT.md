@@ -214,12 +214,24 @@ Rules = 物理的な法律（最後の砦）
 - 編集時に担当者変更を可能に
 - 子アカウント登録バグ修正（Security Rules）
 
-### Phase 8: ご褒美ストア機能・バックエンド要塞化 (完了・本番反映待ち)
-- ご褒美マスター（`rewards`）および交換履歴（`exchanges`）の設計
+### Phase 8: ご褒美ストア機能・バックエンド要塞化 (完了)
+- ご褒美マスター（`rewards`）および承認ワークフロー型交換（`exchanges`）の設計
 - 状態遷移の有限状態機械（State Machine）化
 - ポイント「申請時即時減算 ＆ 却下時安全返金」アーキテクチャの採用
 - Transaction内でのユーザー権限・家族IDの再検証ロジック、および `increment` 競合防御の実装
 - 親の承認/却下時における監査ログ（`delivered_by` / `rejected_by`）の実装
+
+### Phase 8 FIX版: 即時交換決済エンジン (完了)
+- **2ルート並行アーキテクチャ**:
+  - 承認ワークフロー型（`exchanges`）: 既存。子がおねだりし、親が承認してポイント移動。将来の高額ご褒美ルートとして保持。
+  - 即時交換型（`reward_exchanges` + `idempotency_keys`）: 新設。EC決済と同等の即時確定。
+- `firebase-admin` (Admin SDK) を Server Action の信頼境界として導入（`lib/firebase-admin.ts`）
+- `purchaseRequestId`（UUID v4）による冪等性保証（`idempotency_keys` コレクション、TTL 7日）
+- `rewards` に `version` フィールドを追加（楽観的排他制御、`FieldValue.increment(1)` で更新）
+- `reward_exchanges` / `idempotency_keys` の Firestore Security Rules を `allow read, write: if false;` で完全遮断
+- `users` read ルールを自分のドキュメントのみに簡略化
+- 構造化ロギング（`purchaseRequestId`, `rewardId`, `childUserId`, `familyId`, `transactionPhase`, `result`, `errorCode`）
+- **TODO**: `taskActions.approveTask` / `storeActions.createExchange`, `rejectExchange` を Admin SDK に移行後、`users` write を `allow write: if false;` に完全封鎖予定
 
 ---
 

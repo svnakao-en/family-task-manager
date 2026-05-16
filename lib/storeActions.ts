@@ -66,10 +66,10 @@ export async function createExchange(
         );
       }
 
-      // Write: 子のポイントを即時減算（updated_at も記録して一貫性を担保）
+      // Write: 子のポイントを即時減算
+      // ※ users の security rules は hasOnly(['total_reward']) のため updated_at は含めない
       transaction.update(childUserRef, {
         total_reward: currentBalance - required,
-        updated_at: serverTimestamp(),
       });
 
       // Write: 交換申請ドキュメントを作成
@@ -204,9 +204,9 @@ export async function rejectExchange(
       const refundAmount: number = exchangeData.requiredPoints;
 
       // Write: ポイントをアトミックに返金
+      // ※ users の security rules は hasOnly(['total_reward']) のため updated_at は含めない
       transaction.update(childUserRef, {
         total_reward: currentBalance + refundAmount,
-        updated_at: serverTimestamp(),
       });
 
       // Write: ステータスを rejected に確定

@@ -50,14 +50,8 @@ service cloud.firestore {
     // users コレクション
     // ========================================
     match /users/{userId} {
-      // 自分、または同一家族の親のみ読み取り可能
-      allow read: if isAuthenticated() && (
-        request.auth.uid == userId ||
-        (
-          isParent() &&
-          getUserFamilyId(userId) == getFamilyId()
-        )
-      );
+      // 読み取り: ログイン中、かつ自分のドキュメントのみ（onSnapshot ウォレット残高表示に必要）
+      allow read: if request.auth != null && request.auth.uid == userId;
 
       // 自分のデータのみ作成可能
       allow create: if isAuthenticated() &&
@@ -313,6 +307,23 @@ service cloud.firestore {
 
       // 削除禁止（監査ログ保護）
       allow delete: if false;
+    }
+
+    // ========================================
+    // reward_exchanges コレクション（即時交換履歴）
+    // クライアントSDKからのアクセスを完全遮断
+    // 書き込みは Admin SDK Server Action のみ
+    // ========================================
+    match /reward_exchanges/{docId} {
+      allow read, write: if false;
+    }
+
+    // ========================================
+    // idempotency_keys コレクション（冪等性キー）
+    // クライアントSDKからのアクセスを完全遮断
+    // ========================================
+    match /idempotency_keys/{docId} {
+      allow read, write: if false;
     }
 
   }

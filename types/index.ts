@@ -102,8 +102,9 @@ export interface RewardData {
   title: string;
   description?: string;
   requiredPoints: number;
-  stock?: number;          // 未設定=無限、0=売り切れ
+  stock?: number | null;   // undefined/null=無限、0=売り切れ
   isActive: boolean;       // 論理削除フラグ
+  version: number;         // 楽観的排他制御用バージョン
   createdBy: string;
   createdAt: Date;
 }
@@ -138,10 +139,58 @@ export interface FirestoreRewardDocument {
   title: string;
   description?: string;
   required_points: number;
-  stock?: number;
+  stock?: number | null;   // null=無限、0=売り切れ
   is_active: boolean;
+  version: number;         // 更新時は Transaction 内で FieldValue.increment(1)
   created_by: string;
   created_at: any;
+  updated_at?: any;
+}
+
+// ==============================
+// 即時交換（Phase 8 FIX版）
+// ==============================
+
+export type ImmediateExchangeResult =
+  | { success: true; exchangeId: string }
+  | { success: false; code: string; message: string };
+
+/**
+ * Firestore の reward_exchanges コレクションのドキュメント型
+ * ドキュメントID = purchaseRequestId
+ */
+export interface FirestoreExchangeHistoryDocument {
+  exchange_id: string;
+  reward_id: string;
+  reward_snapshot: {
+    reward_id: string;
+    version: number;
+    title: string;
+    description?: string;
+    required_points: number;
+  };
+  child_user_id: string;
+  family_id: string;
+  consumed_points: number;
+  created_at: any;
+  request_metadata: {
+    client_timestamp: number;
+    user_agent?: string;
+    app_version: string;
+  };
+}
+
+/**
+ * Firestore の idempotency_keys コレクションのドキュメント型
+ * ドキュメントID = purchaseRequestId
+ */
+export interface IdempotencyKeyDocument {
+  status: 'completed';
+  exchange_id: string;
+  child_user_id: string;
+  reward_id: string;
+  updated_at: any;
+  expire_at: Date;
 }
 
 /**

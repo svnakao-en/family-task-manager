@@ -32,7 +32,7 @@ export interface StoreProduct {
   title: string;
   description?: string;
   requiredPoints: number;
-  stock?: number | null;
+  stock?: number;
   cardState: RewardCardState;
   pendingExchangeId?: string;
 }
@@ -158,7 +158,7 @@ export function useStoreProducts(childUser: UserData): UseStoreProductsResult {
       title: reward.title,
       description: reward.description,
       requiredPoints: reward.requiredPoints,
-      stock: reward.stock,
+      stock: reward.stock ?? undefined, // null（無限在庫）は undefined に統一
       cardState,
       pendingExchangeId,
     };

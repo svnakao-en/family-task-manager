@@ -35,8 +35,7 @@ export function RewardManageCard({
 
   const handleToggleActive = async () => {
     setActionState('toggling');
-    // isActive 切替はバージョンロック不要（低リスク操作）
-    const result = await updateReward(reward.rewardId, { isActive: !reward.isActive }, parentUser);
+    const result = await updateReward(reward.rewardId, { isActive: !reward.isActive }, parentUser, reward.version);
     setActionState('idle');
     if (result.success) {
       onSuccess?.(reward.isActive ? '非表示にしました' : '表示に戻しました');

@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { updateReward, deleteReward } from '@/lib/rewardActions';
-import { UserData, RewardData } from '@/types';
+import { RewardData } from '@/types';
+import type { AuthContext } from '@/lib/auth/types';
 
 interface RewardManageCardProps {
   reward: RewardData;
-  currentUser: UserData;
+  auth: AuthContext;
   onError?: (msg: string) => void;
   onSuccess?: (msg: string) => void;
 }
@@ -17,12 +17,10 @@ type ActionState = 'idle' | 'saving' | 'deleting' | 'toggling';
 
 export function RewardManageCard({
   reward,
-  currentUser,
+  auth,
   onError,
   onSuccess,
 }: RewardManageCardProps): JSX.Element {
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
   const [mode, setMode] = useState<CardMode>('view');
   const [actionState, setActionState] = useState<ActionState>('idle');
 
@@ -33,49 +31,35 @@ export function RewardManageCard({
     reward.stock == null ? '' : String(reward.stock)
   );
 
-  const isBusy = actionState !== 'idle' || isPending;
-  const parentUser = { userId: currentUser.userId, familyId: currentUser.familyId ?? '', role: currentUser.role ?? '' };
-
-  // VERSION_MISMATCH 時限定: revalidateTag が走らなかった場合の強制同期
-  // 正常系（success）では router.refresh() 不要 — revalidateTag が RSC パッチを自動配信する
-  const refreshOnVersionMismatch = (code: string) => {
-    if (code === 'VERSION_MISMATCH') {
-      startTransition(() => router.refresh());
-    }
-  };
+  const isBusy = actionState !== 'idle';
 
   const handleToggleActive = async () => {
     setActionState('toggling');
-    const result = await updateReward(reward.rewardId, { isActive: !reward.isActive }, parentUser, reward.version);
-    setActionState('idle');
-    if (result.success) {
+    try {
+      await updateReward(auth, reward.rewardId, reward.version, { isActive: !reward.isActive });
       onSuccess?.(reward.isActive ? '非表示にしました' : '表示に戻しました');
-    } else {
-      refreshOnVersionMismatch(result.code);
-      onError?.(result.message);
+    } catch (err: unknown) {
+      onError?.((err as any).message ?? '更新に失敗しました');
+    } finally {
+      setActionState('idle');
     }
   };
 
   const handleSaveEdit = async () => {
     setActionState('saving');
-    const result = await updateReward(
-      reward.rewardId,
-      {
+    try {
+      await updateReward(auth, reward.rewardId, reward.version, {
         title: editTitle,
         description: editDescription,  // 空文字は Server Action 側で null に正規化
         requiredPoints: editPoints === '' ? undefined : Number(editPoints),
         stock: editStock === '' ? null : Number(editStock),
-      },
-      parentUser,
-      reward.version  // 楽観的ロック：編集開始時点のバージョンを渡す
-    );
-    setActionState('idle');
-    if (result.success) {
+      });
       setMode('view');
       onSuccess?.('更新しました');
-    } else {
-      refreshOnVersionMismatch(result.code);
-      onError?.(result.message);
+    } catch (err: unknown) {
+      onError?.((err as any).message ?? '更新に失敗しました');
+    } finally {
+      setActionState('idle');
     }
   };
 
@@ -84,13 +68,13 @@ export function RewardManageCard({
       return;
     }
     setActionState('deleting');
-    const result = await deleteReward(reward.rewardId, parentUser, reward.version);
-    setActionState('idle');
-    if (result.success) {
+    try {
+      await deleteReward(auth, reward.rewardId, reward.version);
       onSuccess?.('削除しました');
-    } else {
-      refreshOnVersionMismatch(result.code);
-      onError?.(result.message);
+    } catch (err: unknown) {
+      onError?.((err as any).message ?? '削除に失敗しました');
+    } finally {
+      setActionState('idle');
     }
   };
 

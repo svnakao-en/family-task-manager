@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useParentRewards } from '@/hooks/useParentRewards';
 import { createReward } from '@/lib/rewardActions';
+import { getCurrentParent } from '@/lib/auth/getCurrentParent';
 import { RewardManageCard } from '@/components/parent/RewardManageCard';
 import { Toast } from '@/components/Toast';
 
@@ -33,12 +34,12 @@ export default function ParentRewardsPage() {
     );
   }
 
-  if (!user || user.role !== 'parent') {
+  if (!user || user.role !== 'parent' || !user.familyId) {
     router.replace('/');
     return null;
   }
 
-  const parentUser = { userId: user.userId, familyId: user.familyId ?? '', role: 'parent' };
+  const auth = getCurrentParent(user);
 
   const resetForm = () => {
     setFormTitle('');
@@ -66,22 +67,19 @@ export default function ParentRewardsPage() {
     }
 
     setIsCreating(true);
-    const result = await createReward(
-      {
+    try {
+      await createReward(auth, {
         title: formTitle,
         description: formDescription === '' ? undefined : formDescription,
         requiredPoints: points,
         stock: formStock === '' ? null : stock,
-      },
-      parentUser
-    );
-    setIsCreating(false);
-
-    if (result.success) {
+      });
       resetForm();
       setToast({ message: 'ご褒美を追加しました', type: 'success' });
-    } else {
-      setToast({ message: result.message, type: 'error' });
+    } catch (err: unknown) {
+      setToast({ message: (err as any).message ?? 'ご褒美の追加に失敗しました', type: 'error' });
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -279,7 +277,7 @@ export default function ParentRewardsPage() {
         <RewardManageCard
           key={reward.rewardId}
           reward={reward}
-          currentUser={user}
+          auth={auth}
           onError={(msg) => setToast({ message: msg, type: 'error' })}
           onSuccess={(msg) => setToast({ message: msg, type: 'success' })}
         />

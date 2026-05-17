@@ -117,6 +117,67 @@ export default function Home() {
         </div>
       </header>
 
+      {/* ナビゲーションハブ */}
+      {user.role === 'child' && (
+        <section style={{ marginBottom: '24px' }}>
+          <Link
+            href="/store"
+            style={{
+              display: 'block',
+              textDecoration: 'none',
+              backgroundColor: '#fff3cd',
+              border: '1px solid #ffeeba',
+              borderRadius: '12px',
+              padding: '16px 20px',
+            }}
+          >
+            <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#856404', marginBottom: '4px' }}>
+              🎁 ご褒美ストアへいく！
+            </div>
+            <div style={{ fontSize: '13px', color: '#856404' }}>
+              ためたポイントを、お菓子やゲームの時間と交換できるよ！
+            </div>
+          </Link>
+        </section>
+      )}
+
+      {user.role === 'parent' && (
+        <section style={{ marginBottom: '24px' }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              backgroundColor: '#e2e3e5',
+              border: '1px solid #ced4da',
+              borderRadius: '12px',
+              padding: '14px 20px',
+              gap: '16px',
+            }}
+          >
+            <div style={{ fontSize: '14px', color: '#495057' }}>
+              💡 ご褒美の追加や編集・在庫の管理は、専用のコンソールから一括で行えます。
+            </div>
+            <Link
+              href="/parent/rewards"
+              style={{
+                flexShrink: 0,
+                padding: '8px 16px',
+                backgroundColor: '#007bff',
+                color: 'white',
+                borderRadius: '8px',
+                textDecoration: 'none',
+                fontSize: '13px',
+                fontWeight: 'bold',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              ご褒美を管理する
+            </Link>
+          </div>
+        </section>
+      )}
+
       {user.role === 'parent' && (
         <section style={{ marginBottom: '30px' }}>
           <TaskForm

@@ -1,7 +1,7 @@
 # 🚀 PRODUCTION_CHECKLIST.md
 ## 本番投入・運用チェックリスト
 
-**最終更新**: 2026-05-07  
+**最終更新**: 2026-05-17  
 **対象**: 未来の開発者・AI・監督  
 **目的**: このファイル単体で迷わず本番投入と運用ができる状態にする
 
@@ -24,14 +24,16 @@ NEXT_PUBLIC_FIREBASE_APP_ID=
 NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=
 ```
 
-### 将来必要（Phase 6以降）: Firebase Admin SDK
+### 必須（Phase 8 FIX以降）: Firebase Admin SDK
 ```env
 FIREBASE_ADMIN_PROJECT_ID=
 FIREBASE_ADMIN_CLIENT_EMAIL=
 FIREBASE_ADMIN_PRIVATE_KEY=
 ```
+> **取得**: Firebase Console → プロジェクト設定 → サービスアカウント → 新しい秘密鍵を生成  
+> `FIREBASE_ADMIN_PRIVATE_KEY` は改行が `\n` のまま Vercel に貼り付けること（自動解釈される）
 
-### 将来必要（Phase 6以降）: App Check
+### 将来必要: App Check
 ```env
 NEXT_PUBLIC_FIREBASE_APP_CHECK_DEBUG_TOKEN=
 FIREBASE_APP_CHECK_SITE_KEY=
@@ -70,6 +72,24 @@ VERCEL_ENV=production
 query(
   collection(db, 'tasks'),
   where('family_id', '==', currentUser.familyId),
+  orderBy('created_at', 'desc')
+)
+```
+
+#### インデックス2: rewards コレクション（Phase 8 以降）
+- **Collection**: `rewards`
+- **Field 1**: `family_id` (Ascending)
+- **Field 2**: `is_deleted` (Ascending)
+- **Field 3**: `created_at` (Descending)
+- **Query Scope**: Collection
+
+**理由:**
+```typescript
+// useParentRewards.ts で使用
+query(
+  collection(db, 'rewards'),
+  where('family_id', '==', familyId),
+  where('is_deleted', '==', false),
   orderBy('created_at', 'desc')
 )
 ```
@@ -461,7 +481,7 @@ firebase deploy --only firestore:rules
 
 ---
 
-**最終更新**: 2026-05-07  
+**最終更新**: 2026-05-17  
 **作成者**: Bob  
 **ステータス**: 小規模商用β運用可能
 

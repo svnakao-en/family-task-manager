@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { updateReward, deleteReward } from '@/lib/rewardActions';
 import { UserData, RewardData } from '@/types';
 
@@ -20,6 +21,8 @@ export function RewardManageCard({
   onError,
   onSuccess,
 }: RewardManageCardProps): JSX.Element {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const [mode, setMode] = useState<CardMode>('view');
   const [actionState, setActionState] = useState<ActionState>('idle');
 
@@ -30,8 +33,16 @@ export function RewardManageCard({
     reward.stock == null ? '' : String(reward.stock)
   );
 
-  const isBusy = actionState !== 'idle';
+  const isBusy = actionState !== 'idle' || isPending;
   const parentUser = { userId: currentUser.userId, familyId: currentUser.familyId ?? '', role: currentUser.role ?? '' };
+
+  // VERSION_MISMATCH 時限定: revalidateTag が走らなかった場合の強制同期
+  // 正常系（success）では router.refresh() 不要 — revalidateTag が RSC パッチを自動配信する
+  const refreshOnVersionMismatch = (code: string) => {
+    if (code === 'VERSION_MISMATCH') {
+      startTransition(() => router.refresh());
+    }
+  };
 
   const handleToggleActive = async () => {
     setActionState('toggling');
@@ -40,6 +51,7 @@ export function RewardManageCard({
     if (result.success) {
       onSuccess?.(reward.isActive ? '非表示にしました' : '表示に戻しました');
     } else {
+      refreshOnVersionMismatch(result.code);
       onError?.(result.message);
     }
   };
@@ -62,6 +74,7 @@ export function RewardManageCard({
       setMode('view');
       onSuccess?.('更新しました');
     } else {
+      refreshOnVersionMismatch(result.code);
       onError?.(result.message);
     }
   };
@@ -76,6 +89,7 @@ export function RewardManageCard({
     if (result.success) {
       onSuccess?.('削除しました');
     } else {
+      refreshOnVersionMismatch(result.code);
       onError?.(result.message);
     }
   };

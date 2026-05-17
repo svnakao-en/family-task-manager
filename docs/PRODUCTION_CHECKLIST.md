@@ -339,12 +339,12 @@ firebase deploy --only firestore:rules
 ## 7. 緊急連絡先
 
 ### Firebase プロジェクト情報
-- **Project ID**: `[ここに記入]`
+- **Project ID**: `kodukai-app`
 - **Project Owner**: `[ここに記入]`
 - **Firebase Console**: https://console.firebase.google.com/
 
 ### Vercel プロジェクト情報
-- **Project Name**: `[ここに記入]`
+- **Project Name**: `family-task-manager`
 - **Team**: `[ここに記入]`
 - **Vercel Dashboard**: https://vercel.com/dashboard
 

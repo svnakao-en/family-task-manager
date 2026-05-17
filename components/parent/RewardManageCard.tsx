@@ -35,6 +35,7 @@ export function RewardManageCard({
 
   const handleToggleActive = async () => {
     setActionState('toggling');
+    // isActive 切替はバージョンロック不要（低リスク操作）
     const result = await updateReward(reward.rewardId, { isActive: !reward.isActive }, parentUser);
     setActionState('idle');
     if (result.success) {
@@ -50,11 +51,12 @@ export function RewardManageCard({
       reward.rewardId,
       {
         title: editTitle,
-        description: editDescription === '' ? undefined : editDescription,
+        description: editDescription,  // 空文字は Server Action 側で null に正規化
         requiredPoints: editPoints === '' ? undefined : Number(editPoints),
         stock: editStock === '' ? null : Number(editStock),
       },
-      parentUser
+      parentUser,
+      reward.version  // 楽観的ロック：編集開始時点のバージョンを渡す
     );
     setActionState('idle');
     if (result.success) {
@@ -70,7 +72,7 @@ export function RewardManageCard({
       return;
     }
     setActionState('deleting');
-    const result = await deleteReward(reward.rewardId, parentUser);
+    const result = await deleteReward(reward.rewardId, parentUser, reward.version);
     setActionState('idle');
     if (result.success) {
       onSuccess?.('削除しました');

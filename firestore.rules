@@ -257,24 +257,50 @@ service cloud.firestore {
       allow read: if isAuthenticated() &&
         belongsToFamily(resource.data.family_id);
 
-      // 作成: 親のみ
+      // 作成: Admin SDK（rewardActions.createReward）が担当。
+      // Admin SDK はルールをバイパスするため、このルールはクライアント直接投稿への二重ガード。
       allow create: if isAuthenticated() &&
         isParent() &&
         belongsToFamily(request.resource.data.family_id) &&
         request.resource.data.created_by == request.auth.uid &&
+        request.resource.data.is_active == true &&
+        request.resource.data.is_deleted == false &&
         request.resource.data.required_points is int &&
-        request.resource.data.required_points > 0 &&
-        request.resource.data.is_active == true;
+        request.resource.data.required_points > 0;
 
-      // 更新: 親のみ（論理削除・編集を含む）
+      // 更新:
+      //   Admin SDK 経由（rewardActions.ts: updateReward / deleteReward / restoreReward）
+      //     → Security Rules をバイパスするためここには到達しない
+      //   Client SDK 経由（storeActions.ts: deliverExchange の stock 減算）
+      //     → isValidRewardStockDeduction() で stock と updated_at の変更のみを許可
       allow update: if isAuthenticated() &&
         isParent() &&
         belongsToFamily(resource.data.family_id) &&
-        request.resource.data.family_id == resource.data.family_id &&
-        request.resource.data.created_by == resource.data.created_by;
+        isValidRewardStockDeduction();
 
       // 物理削除禁止（過去の交換履歴保護）
       allow delete: if false;
+    }
+
+    // rewards の在庫引き渡し（deliverExchange による stock 減算のみを許可）
+    // 権限チェック（isParent / belongsToFamily）は外側の allow update で担保済み
+    function isValidRewardStockDeduction() {
+      let oldData = resource.data;
+      let newData = request.resource.data;
+      return (
+        // 論理削除済みのドキュメントへの更新を一切拒否
+        oldData.is_deleted == false &&
+        // 差分は stock と updated_at のみ許可（title / required_points 等の改ざんを物理遮断）
+        newData.diff(oldData).affectedKeys().hasOnly(['stock', 'updated_at']) &&
+        // 在庫の整合性:
+        //   旧在庫が 1 以上（売り切れ状態での取引を禁止）
+        //   新在庫が int かつ 0 以上（最後の1個を買って 0 になるケースを正しく許可）
+        //   正確に1減算されていることを保証
+        oldData.stock > 0 &&
+        newData.stock is int &&
+        newData.stock >= 0 &&
+        newData.stock == oldData.stock - 1
+      );
     }
 
     // ========================================

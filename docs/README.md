@@ -12,7 +12,7 @@
 - **ステータス遷移**: `pending → working → completed → approved`（承認後は不変）
 
 ## 🚀 現在のステータス
-Phase 5 完了・本番稼働中。Phase 6（運用改善機能）を開発継続中。
+Phase 8.8 進行中・本番稼働中。導線開通（Step 1-2完了）。次は Vercel デプロイ確認と `/store/requests` への導線追加。
 
 ## 🚀 開発の進め方
 AIと協力して開発する場合、`docs/AI_CONTEXT.md` を最新のセーブデータとして各AIに読み込ませてください。

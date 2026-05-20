@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { useParentRewards } from '@/hooks/useParentRewards';
 import { createReward } from '@/lib/rewardActions';
@@ -103,22 +104,37 @@ export default function ParentRewardsPage() {
         </p>
       </div>
 
-      {/* 戻るボタン */}
-      <button
-        onClick={() => router.back()}
-        style={{
-          marginBottom: '16px',
-          padding: '6px 14px',
-          backgroundColor: '#f5f5f5',
-          border: '1px solid #ddd',
-          borderRadius: '6px',
-          cursor: 'pointer',
-          fontSize: '13px',
-          color: '#666',
-        }}
-      >
-        ← もどる
-      </button>
+      {/* ナビゲーションバー */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+        <button
+          onClick={() => router.back()}
+          style={{
+            padding: '6px 14px',
+            backgroundColor: '#f5f5f5',
+            border: '1px solid #ddd',
+            borderRadius: '6px',
+            cursor: 'pointer',
+            fontSize: '13px',
+            color: '#666',
+          }}
+        >
+          ← もどる
+        </button>
+        <Link
+          href="/store/requests"
+          style={{
+            padding: '8px 16px',
+            backgroundColor: '#28a745',
+            color: '#ffffff',
+            borderRadius: '8px',
+            textDecoration: 'none',
+            fontSize: '13px',
+            fontWeight: 'bold',
+          }}
+        >
+          📥 交換申請を承認する
+        </Link>
+      </div>
 
       {/* 追加ボタン / フォーム */}
       {!showForm ? (

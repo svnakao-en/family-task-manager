@@ -1,6 +1,6 @@
 # 開発進捗ダッシュボード
 
-**最終更新**: 2026-05-17  
+**最終更新**: 2026-05-21  
 **読者**: オーナー
 
 ---
@@ -17,17 +17,26 @@
 
 ```
 / (トップ)
-  ├── [📋 履歴を見る] → /history        ✅ 導線あり
-  ├── [ご褒美ストアへ] → /store          ❌ 存在しない（子向け）
-  └── [ご褒美管理へ]  → /parent/rewards  ❌ 存在しない（親向け）
+  ├── [📋 履歴を見る] → /history             ✅ 導線あり（全ロール）
+  ├── [🎁 ご褒美ストアへいく！] → /store      ✅ 導線あり（子のみ）
+  └── [ご褒美を管理する] → /parent/rewards    ✅ 導線あり（親のみ）
 
 /store（子のご褒美ストア）
-  └── [← もどる] → 前の画面             ✅ 戻り口はある
-  ※ 入口がないので実質アクセス不能
+  └── [← もどる] → router.back()            ✅ 戻り口はある
 
 /parent/rewards（親のご褒美管理）
-  └── [← もどる] → 前の画面             ✅ 戻り口はある
-  ※ 入口がないので実質アクセス不能
+  └── [← もどる] → router.back()            ✅ 戻り口はある
+  ※ /store/requests への導線がない
+
+/store/requests（親の交換申請承認キュー）
+  └── [← もどる] → router.back()            ✅ 戻り口はある
+  ※ 入口がないので実質アクセス不能（/parent/rewards からの導線が必要）
+
+/history（タスク承認履歴）
+  └── [← 戻る] → / （固定リンク）           ✅ 導線あり
+
+/tasks（旧ルート・廃止済み）
+  └── redirect('/') 済み。本番流入ゼロ確認後に物理削除予定
 ```
 
 ---
@@ -35,9 +44,18 @@
 ## [Phase 8.8] 導線開通とルーティング一本化
 
 - [x] Step 1: トップページ（/）に役割別の導線ボタン（親用管理 / 子用ポイント連動ストア）を追加
-- [/] Step 2: 重複していた旧 `/tasks` ルートを安全に廃止
-  - 📝 内部リンクの全索敵と `/` への書き換え完了（該当リンクはゼロだった）
-  - 🔒 既存ブックマーク対策として `app/tasks/page.tsx` を `redirect('/')` 化（本番流入ゼロ確認後に完全物理削除予定）
+- [x] Step 2: 重複していた旧 `/tasks` ルートを安全に廃止
+  - 内部リンクの全索敵と `/` への書き換え完了（該当リンクはゼロだった）
+  - `app/tasks/page.tsx` を `redirect('/')` 化（本番流入ゼロ確認後に完全物理削除予定）
+- [x] Step 2.5: 親の交換申請承認キュー（`/store/requests`）への導線開通
+  - `app/parent/rewards/page.tsx` のナビゲーションバーに `📥 交換申請を承認する` ボタンを追加（`Link` + `/store/requests`）
+- [ ] Step 2.8: 【金融システム化】ご褒美在庫減算ルールの極限緊縛（Hardening）
+  - [x] `firestore.rules` に `isValidRewardStockDeduction()` を実装（確定版デプロイ待ち）
+    - `affectedKeys().hasOnly(['stock', 'updated_at'])` による差分制御
+    - 境界値修正: `newData.stock >= 0`（最後の1個を正しく購入可能）
+    - 権限チェック（`isParent` / `belongsToFamily`）を `allow update` 外側に分離
+  - [x] `storeActions.ts` の `deliverExchange` が最小 `update()` のみ使用していることを確認済み（変更不要）
+  - [ ] `firebase deploy --only firestore:rules` で本番デプロイ
 - [ ] Step 3: Vercel 本番環境デプロイ、および親・子アカウントでの動作確認
 
 ---

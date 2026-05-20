@@ -1,5 +1,5 @@
 # 🤖 AI_CONTEXT.md - Family Task Management & Reward System
-## 📅 最終更新: 2026-05-17 | ステータス: 本番稼働中・Phase 8.7 完了
+## 📅 最終更新: 2026-05-18 | ステータス: 本番稼働中・Phase 8.8 進行中（Step 1-2 完了）
 
 ---
 
@@ -233,6 +233,35 @@ Rules = 物理的な法律（最後の砦）
 - 状態に応じたローディング（Disabled）制御、連打による重複申請の防止
 - `onSnapshot` によるリアルタイム同期（`router.refresh()` は使用しない）
 
+### rewards コレクション更新ルールの設計原則（重要・確定版）
+
+`rewardActions.ts`（createReward / updateReward / deleteReward / restoreReward）は **Admin SDK** を使用するため、Security Rules を完全にバイパスする。
+
+Security Rules の `rewards` update ルールが適用される唯一のクライアント操作は `storeActions.ts` の `deliverExchange`（在庫減算）のみ。update ルールを `isValidRewardStockDeduction()` に絞り込み、以下を保証する:
+
+| 制御 | 内容 |
+|------|------|
+| 権限 | `isParent() && belongsToFamily()` を外側の `allow update` で担保 |
+| 差分制御 | `newData.diff(oldData).affectedKeys().hasOnly(['stock', 'updated_at'])` — 他フィールドの改ざんを物理遮断 |
+| 論理削除保護 | `oldData.is_deleted == false` のドキュメントのみ更新可 |
+| 在庫整合性 | `oldData.stock > 0`（売り切れ禁止）・`newData.stock >= 0`（最後の1個購入を正しく許可）・`newData.stock == oldData.stock - 1`（1減算のみ） |
+
+`restoreReward()` は Admin SDK 経由のため Rules とは無衝突。クライアントから `is_deleted=true` ドキュメントを更新する手段は存在しない。
+
+### 在庫更新の実装規約（コーディングガバナンス・憲法条項 #13）
+
+`rewards` の在庫更新処理では `transaction.set(..., { merge: true })` および DTO 全体の `update` を全面禁止する。理由: `affectedKeys().hasOnly(['stock', 'updated_at'])` により許可フィールドが極限まで絞られているため、余分なフィールドが混入した瞬間に本番で `permission-denied` が発生する。
+
+**絶対遵守する形式:**
+```typescript
+transaction.update(rewardRef, {
+  stock: newStock,
+  updated_at: serverTimestamp(),
+});
+```
+
+更新フィールドを増やす場合は、`firestore.rules` の `isValidRewardStockDeduction()` 内 `hasOnly([...])` との整合性を必ず同時に見直すこと。
+
 ---
 
 ## ⚠️ 禁止事項（憲法違反 = 即差し戻し）
@@ -251,6 +280,8 @@ Rules = 物理的な法律（最後の砦）
 10. **`loadedVersion` のオプショナル化禁止**: `loadedVersion?: number` にすると楽観的ロックが無効化される。必須（`loadedVersion: number`）を維持
 11. **`router.refresh()` の使用禁止（ご褒美画面）**: `onSnapshot` がリアルタイム同期を担う。`router.refresh()` は不要かつ二重更新の原因になる
 12. **Transaction 内での `FieldValue.increment()` 使用禁止（Exchange 系）**: `exchanges` の `createExchange` / `rejectExchange` では Read-before-Write で手動算術演算を行う。`rewardActions` の version bump は `FieldValue.increment(1)` を使用（逆は違反）
+13. **`rewards` 在庫更新での DTO merge 禁止**: `transaction.set(..., { merge: true })` および余分なフィールドを含んだ `update()` を禁止。必ず `{ stock: newStock, updated_at: serverTimestamp() }` のみで更新すること。フィールドを増やす場合は `firestore.rules` の `isValidRewardStockDeduction()` と同時に見直すこと
+14. **Browser SDK から `rewards` を自由更新することの永久禁止（不可逆）**: 「親画面から Browser SDK で rewards を直接編集したい」という変更要求は設計理由を問わず拒否すること。通常編集（タイトル・ポイント・在庫・削除・復元）は必ず `Server Actions + Admin SDK（trusted server）` 経由とする。Client SDK からの rewards update を自由化した瞬間、Security Rules の物理的封鎖が崩壊する
 
 ---
 
@@ -283,6 +314,11 @@ Rules = 物理的な法律（最後の砦）
 - `useParentRewards` フック（onSnapshot によるリアルタイムストリーム）
 - `loadedVersion` を必須化、`normalizeText()` による undefined/空文字の正規化
 - `restoreReward()` 追加（同名アクティブ報酬の重複チェック付き）
+
+### Phase 8.8: 導線開通とルーティング一本化（進行中 - 2026-05-18）
+- トップページ（`/`）に役割別導線ボタン追加（子: ご褒美ストア / 親: ご褒美管理）
+- 旧 `/tasks` ルートを `redirect('/')` 化（物理削除は本番流入ゼロ確認後）
+- **発見済み残課題**: `/store/requests`（親の交換申請承認キュー）が孤立。`/parent/rewards` からの導線が未実装
 
 ### Phase 8.7: AuthContext 一本化（完了 - 2026-05-17）
 - `lib/auth/types.ts`: `AuthRole` / `AuthContext` インターフェース定義
@@ -343,6 +379,7 @@ tasks コレクション:
 
 ## 🔮 今後の課題（TODO）
 
+- `/store/requests`（親の交換申請承認キュー）への導線を `/parent/rewards` に追加する
 - `taskActions.approveTask` / `storeActions.createExchange`, `rejectExchange` を Admin SDK に移行後、`users` write を `allow write: if false;` に完全封鎖
 - `any` 型の排除（`lib/taskActions.ts` / `lib/taskUtils.ts`）
 - `startTask` / `rejectTask` の runTransaction 化（現在 writeBatch）

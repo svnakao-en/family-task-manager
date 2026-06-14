@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { deliverExchange, rejectExchange } from '@/lib/storeActions';
 import { UserData, ExchangeData } from '@/types';
 import { formatTimeAgo } from '@/lib/storeUtils';
+import { useWorldTheme } from '@/hooks/useWorldTheme';
 
 interface ApprovalCardProps {
   exchange: ExchangeData;
@@ -18,6 +19,7 @@ export function ApprovalCard({
   currentUser,
   onError,
 }: ApprovalCardProps): JSX.Element {
+  const { colors } = useWorldTheme();
   const [state, setState] = useState<ApprovalCardState>('idle');
 
   const isBusy = state === 'delivering' || state === 'rejecting';
@@ -57,8 +59,8 @@ export function ApprovalCard({
   return (
     <div
       style={{
-        backgroundColor: '#fff',
-        border: '1px solid #e0e0e0',
+        backgroundColor: colors.cardBg,
+        border: `1px solid ${colors.cardBorder}`,
         borderRadius: '12px',
         padding: '16px',
         marginBottom: '12px',
@@ -78,10 +80,10 @@ export function ApprovalCard({
           marginBottom: '4px',
         }}
       >
-        <span style={{ fontSize: '13px', color: '#888', fontWeight: 'bold' }}>
+        <span style={{ fontSize: '13px', color: colors.subtle, fontWeight: 'bold' }}>
           {exchange.childName}
         </span>
-        <span style={{ fontSize: '12px', color: '#aaa' }}>
+        <span style={{ fontSize: '12px', color: colors.muted }}>
           {formatTimeAgo(exchange.createdAt)}
         </span>
       </div>
@@ -92,27 +94,27 @@ export function ApprovalCard({
           margin: '4px 0 6px',
           fontSize: '16px',
           fontWeight: 'bold',
-          color: '#333',
+          color: colors.title,
         }}
       >
         {exchange.rewardTitle}
       </h3>
 
       {/* 必要ポイント */}
-      <p style={{ margin: '0 0 12px', fontSize: '14px', color: '#FF9800', fontWeight: 'bold' }}>
+      <p style={{ margin: '0 0 12px', fontSize: '14px', color: colors.accent, fontWeight: 'bold' }}>
         {exchange.requiredPoints} ポイント
       </p>
 
       {/* 処理済みバッジ */}
       {isResolved && (
-        <p style={{ margin: '0', fontSize: '13px', color: '#4CAF50', fontWeight: 'bold' }}>
+        <p style={{ margin: '0', fontSize: '13px', color: colors.successText, fontWeight: 'bold' }}>
           ✓ 処理完了（リストから消えるまで少し待ってね）
         </p>
       )}
 
       {/* エラーメッセージ */}
       {state === 'error' && (
-        <p style={{ margin: '0 0 8px', fontSize: '13px', color: '#f44336' }}>
+        <p style={{ margin: '0 0 8px', fontSize: '13px', color: colors.errorText }}>
           エラーが発生しました。もう一度試してください。
         </p>
       )}
@@ -126,8 +128,8 @@ export function ApprovalCard({
             style={{
               flex: 1,
               padding: '10px 0',
-              backgroundColor: isBusy && state === 'delivering' ? '#A5D6A7' : '#4CAF50',
-              color: 'white',
+              backgroundColor: isBusy && state === 'delivering' ? colors.btnDisabledBg : colors.btnSuccessBg,
+              color: isBusy && state === 'delivering' ? colors.btnDisabledText : colors.btnSuccessText,
               border: 'none',
               borderRadius: '8px',
               cursor: isBusy ? 'not-allowed' : 'pointer',
@@ -144,8 +146,8 @@ export function ApprovalCard({
             style={{
               flex: 1,
               padding: '10px 0',
-              backgroundColor: isBusy && state === 'rejecting' ? '#EF9A9A' : '#F44336',
-              color: 'white',
+              backgroundColor: isBusy && state === 'rejecting' ? colors.btnDisabledBg : colors.btnDangerBg,
+              color: isBusy && state === 'rejecting' ? colors.btnDisabledText : colors.btnDangerText,
               border: 'none',
               borderRadius: '8px',
               cursor: isBusy ? 'not-allowed' : 'pointer',

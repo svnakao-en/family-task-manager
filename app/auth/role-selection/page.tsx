@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { useWorldTheme } from '@/hooks/useWorldTheme';
 import { db } from '@/lib/firebase';
 import {
   collection,
@@ -17,8 +18,9 @@ import {
 export default function RoleSelectionPage(): JSX.Element {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const { colors } = useWorldTheme();
+
   const [selectedRole, setSelectedRole] = useState<'parent' | 'child' | null>(null);
-  // 変更点①: 名前入力用ステートを追加
   const [userName, setUserName] = useState<string>('');
   const [familyName, setFamilyName] = useState<string>('');
   const [familyId, setFamilyId] = useState<string>('');
@@ -44,11 +46,7 @@ export default function RoleSelectionPage(): JSX.Element {
     return <div>リダイレクト中...</div>;
   }
 
-  /**
-   * 親として登録する処理
-   */
   const handleParentRegistration = async (): Promise<void> => {
-    // 変更点②: 名前のバリデーションを追加
     if (!userName.trim()) {
       setError('お名前を入力してください');
       return;
@@ -64,14 +62,12 @@ export default function RoleSelectionPage(): JSX.Element {
     try {
       const batch = writeBatch(db);
 
-      // families に新規ドキュメントを作成
       const familyRef = doc(collection(db, 'families'));
       batch.set(familyRef, {
         name: familyName.trim(),
       });
       const newFamilyId = familyRef.id;
 
-      // family_members を更新
       const familyMembersRef = collection(db, 'family_members');
       const q = query(familyMembersRef, where('user_id', '==', user.userId));
       const querySnapshot = await getDocs(q);
@@ -91,7 +87,6 @@ export default function RoleSelectionPage(): JSX.Element {
         });
       }
 
-      // 変更点③: users コレクションに名前を保存
       const userRef = doc(db, 'users', user.userId);
       batch.update(userRef, {
         name: userName.trim(),
@@ -107,11 +102,7 @@ export default function RoleSelectionPage(): JSX.Element {
     }
   };
 
-  /**
-   * 子として登録する処理
-   */
   const handleChildRegistration = async (): Promise<void> => {
-    // 変更点②: 名前のバリデーションを追加
     if (!userName.trim()) {
       setError('お名前を入力してください');
       return;
@@ -125,7 +116,6 @@ export default function RoleSelectionPage(): JSX.Element {
     setError('');
 
     try {
-      // 家族IDの存在確認
       const familyDocRef = doc(db, 'families', familyId.trim());
       const familyDoc = await getDoc(familyDocRef);
 
@@ -136,7 +126,6 @@ export default function RoleSelectionPage(): JSX.Element {
 
       const batch = writeBatch(db);
 
-      // family_members を更新
       const familyMembersRef = collection(db, 'family_members');
       const q = query(familyMembersRef, where('user_id', '==', user.userId));
       const querySnapshot = await getDocs(q);
@@ -156,7 +145,6 @@ export default function RoleSelectionPage(): JSX.Element {
         });
       }
 
-      // 変更点③: users コレクションに名前を保存
       const userRef = doc(db, 'users', user.userId);
       batch.update(userRef, {
         name: userName.trim(),
@@ -183,6 +171,17 @@ export default function RoleSelectionPage(): JSX.Element {
     }
   };
 
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '10px',
+    fontSize: '16px',
+    borderRadius: '5px',
+    border: `1px solid ${colors.cardBorder}`,
+    backgroundColor: colors.inputBg,
+    color: colors.text,
+    boxSizing: 'border-box',
+  };
+
   // 親登録完了後の画面
   if (createdFamilyId) {
     return (
@@ -192,7 +191,7 @@ export default function RoleSelectionPage(): JSX.Element {
         <p>以下の家族IDを子供に共有してください。</p>
         <div style={{
           padding: '15px',
-          backgroundColor: '#f0f0f0',
+          backgroundColor: colors.panelBgMuted,
           borderRadius: '5px',
           marginTop: '20px',
           marginBottom: '20px',
@@ -211,8 +210,8 @@ export default function RoleSelectionPage(): JSX.Element {
           onClick={handleCopyFamilyId}
           style={{
             padding: '10px 20px',
-            backgroundColor: '#4CAF50',
-            color: 'white',
+            backgroundColor: colors.btnSuccessBg,
+            color: colors.btnSuccessText,
             border: 'none',
             borderRadius: '5px',
             cursor: 'pointer',
@@ -226,8 +225,8 @@ export default function RoleSelectionPage(): JSX.Element {
           onClick={() => router.push('/')}
           style={{
             padding: '10px 20px',
-            backgroundColor: '#2196F3',
-            color: 'white',
+            backgroundColor: colors.btnPrimaryBg,
+            color: colors.btnPrimaryText,
             border: 'none',
             borderRadius: '5px',
             cursor: 'pointer',
@@ -249,8 +248,8 @@ export default function RoleSelectionPage(): JSX.Element {
       {error && (
         <div style={{
           padding: '10px',
-          backgroundColor: '#ffebee',
-          color: '#c62828',
+          backgroundColor: colors.errorBg,
+          color: colors.errorText,
           borderRadius: '5px',
           marginBottom: '20px',
         }}>
@@ -258,7 +257,6 @@ export default function RoleSelectionPage(): JSX.Element {
         </div>
       )}
 
-      {/* 変更点①: 名前入力欄（役割選択より先に表示） */}
       <div style={{ marginTop: '20px', marginBottom: '30px' }}>
         <h2>お名前</h2>
         <input
@@ -267,17 +265,10 @@ export default function RoleSelectionPage(): JSX.Element {
           onChange={(e) => setUserName(e.target.value)}
           placeholder="例: たろう"
           disabled={isProcessing}
-          style={{
-            width: '100%',
-            padding: '10px',
-            fontSize: '16px',
-            borderRadius: '5px',
-            border: '1px solid #ccc',
-          }}
+          style={inputStyle}
         />
       </div>
 
-      {/* 役割選択 */}
       <div>
         <h2>役割</h2>
         <div style={{ marginBottom: '20px' }}>
@@ -319,22 +310,15 @@ export default function RoleSelectionPage(): JSX.Element {
             onChange={(e) => setFamilyName(e.target.value)}
             placeholder="例: 田中家"
             disabled={isProcessing}
-            style={{
-              width: '100%',
-              padding: '10px',
-              fontSize: '16px',
-              borderRadius: '5px',
-              border: '1px solid #ccc',
-              marginBottom: '20px',
-            }}
+            style={{ ...inputStyle, marginBottom: '20px' }}
           />
           <button
             onClick={handleParentRegistration}
             disabled={isProcessing}
             style={{
               padding: '10px 20px',
-              backgroundColor: isProcessing ? '#ccc' : '#4CAF50',
-              color: 'white',
+              backgroundColor: isProcessing ? colors.btnDisabledBg : colors.btnSuccessBg,
+              color: isProcessing ? colors.btnDisabledText : colors.btnSuccessText,
               border: 'none',
               borderRadius: '5px',
               cursor: isProcessing ? 'not-allowed' : 'pointer',
@@ -349,7 +333,7 @@ export default function RoleSelectionPage(): JSX.Element {
       {selectedRole === 'child' && (
         <div style={{ marginTop: '20px' }}>
           <h2>家族ID</h2>
-          <p style={{ fontSize: '14px', color: '#666' }}>
+          <p style={{ fontSize: '14px', color: colors.subtle }}>
             親から共有された家族IDを入力してください
           </p>
           <input
@@ -358,22 +342,15 @@ export default function RoleSelectionPage(): JSX.Element {
             onChange={(e) => setFamilyId(e.target.value)}
             placeholder="家族IDを入力"
             disabled={isProcessing}
-            style={{
-              width: '100%',
-              padding: '10px',
-              fontSize: '16px',
-              borderRadius: '5px',
-              border: '1px solid #ccc',
-              marginBottom: '20px',
-            }}
+            style={{ ...inputStyle, marginBottom: '20px' }}
           />
           <button
             onClick={handleChildRegistration}
             disabled={isProcessing}
             style={{
               padding: '10px 20px',
-              backgroundColor: isProcessing ? '#ccc' : '#2196F3',
-              color: 'white',
+              backgroundColor: isProcessing ? colors.btnDisabledBg : colors.btnPrimaryBg,
+              color: isProcessing ? colors.btnDisabledText : colors.btnPrimaryText,
               border: 'none',
               borderRadius: '5px',
               cursor: isProcessing ? 'not-allowed' : 'pointer',

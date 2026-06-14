@@ -1,41 +1,39 @@
 "use client";
 
 import { useEffect, useState } from 'react';
+import { useWorldTheme } from '@/hooks/useWorldTheme';
 
-/**
- * トースト通知の型定義
- */
 export interface ToastMessage {
   id: string;
   message: string;
   type: 'success' | 'error' | 'info';
 }
 
-/**
- * トースト通知コンポーネント
- * シンプルで軽量な実装
- */
-export function Toast({ 
-  message, 
-  type, 
-  onClose 
-}: { 
-  message: string; 
-  type: 'success' | 'error' | 'info'; 
+export function Toast({
+  message,
+  type,
+  onClose,
+}: {
+  message: string;
+  type: 'success' | 'error' | 'info';
   onClose: () => void;
 }): JSX.Element {
+  const { colors, effects } = useWorldTheme();
+
   useEffect(() => {
     const timer = setTimeout(() => {
       onClose();
-    }, 4000); // 4秒後に自動で閉じる
-
+    }, 4000);
     return () => clearTimeout(timer);
   }, [onClose]);
 
-  const backgroundColor = 
-    type === 'success' ? '#4CAF50' : 
-    type === 'error' ? '#f44336' : 
-    '#2196F3';
+  const colorMap = {
+    success: { bg: colors.successBg, text: colors.successText },
+    error:   { bg: colors.errorBg,   text: colors.errorText   },
+    info:    { bg: colors.btnPrimaryBg, text: colors.btnPrimaryText },
+  } as const;
+
+  const { bg, text } = colorMap[type];
 
   return (
     <div
@@ -43,11 +41,11 @@ export function Toast({
         position: 'fixed',
         bottom: '20px',
         right: '20px',
-        backgroundColor,
-        color: 'white',
+        backgroundColor: bg,
+        color: text,
         padding: '16px 24px',
         borderRadius: '8px',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+        boxShadow: effects.cardShadow,
         zIndex: 9999,
         maxWidth: '400px',
         animation: 'slideIn 0.3s ease-out',
@@ -60,7 +58,7 @@ export function Toast({
           style={{
             background: 'none',
             border: 'none',
-            color: 'white',
+            color: text,
             cursor: 'pointer',
             fontSize: '20px',
             padding: '0',
@@ -87,9 +85,6 @@ export function Toast({
   );
 }
 
-/**
- * トースト通知を管理するカスタムフック
- */
 export function useToast() {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 

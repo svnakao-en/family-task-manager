@@ -1,29 +1,26 @@
 "use client";
 
-/**
- * EmptyState コンポーネントのProps
- */
+import { useWorldTheme } from '@/hooks/useWorldTheme';
+
 interface EmptyStateProps {
   message: string;
   submessage?: string;
   icon?: string;
 }
 
-/**
- * 空状態を表示するコンポーネント
- * タスクが0件の場合や、データが存在しない場合に使用
- */
 export function EmptyState({
   message,
   submessage,
   icon = '📭',
 }: EmptyStateProps): JSX.Element {
+  const { colors } = useWorldTheme();
+
   return (
     <div
       style={{
         padding: '48px 16px',
         textAlign: 'center',
-        color: '#666',
+        color: colors.subtle,
       }}
     >
       <div style={{ fontSize: '48px', marginBottom: '16px' }}>
@@ -33,7 +30,7 @@ export function EmptyState({
         {message}
       </p>
       {submessage && (
-        <p style={{ margin: 0, fontSize: '14px', color: '#999' }}>
+        <p style={{ margin: 0, fontSize: '14px', color: colors.muted }}>
           {submessage}
         </p>
       )}

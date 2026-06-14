@@ -1,6 +1,8 @@
 "use client";
 
 import { StoreProduct, RewardCardState } from '@/hooks/useStoreProducts';
+import { useWorldTheme } from '@/hooks/useWorldTheme';
+import { WorldTheme } from '@/theme/types';
 
 interface StoreCardProps {
   product: StoreProduct;
@@ -14,12 +16,13 @@ interface CardConfig {
   borderColor: string;
   buttonLabel: string;
   buttonColor: string;
+  buttonShadow: string;
   badgeLabel: string;
   badgeColor: string;
   buttonDisabled: boolean;
 }
 
-function getStateConfig(state: RewardCardState, shortfall: number): CardConfig {
+function getDailyConfig(state: RewardCardState, shortfall: number): CardConfig {
   switch (state) {
     case 'available':
       return {
@@ -27,6 +30,7 @@ function getStateConfig(state: RewardCardState, shortfall: number): CardConfig {
         borderColor: '#FFE082',
         buttonLabel: 'こうかんする！',
         buttonColor: '#FF9800',
+        buttonShadow: 'none',
         badgeLabel: 'こうかんできるよ',
         badgeColor: '#FF9800',
         buttonDisabled: false,
@@ -37,6 +41,7 @@ function getStateConfig(state: RewardCardState, shortfall: number): CardConfig {
         borderColor: '#90CAF9',
         buttonLabel: 'しんせいちゅう',
         buttonColor: '#64B5F6',
+        buttonShadow: 'none',
         badgeLabel: '⏳ おやのへんじまち',
         badgeColor: '#2196F3',
         buttonDisabled: true,
@@ -47,6 +52,7 @@ function getStateConfig(state: RewardCardState, shortfall: number): CardConfig {
         borderColor: '#e0e0e0',
         buttonLabel: 'うりきれ',
         buttonColor: '#9E9E9E',
+        buttonShadow: 'none',
         badgeLabel: '😢 うりきれです',
         badgeColor: '#9E9E9E',
         buttonDisabled: true,
@@ -57,12 +63,69 @@ function getStateConfig(state: RewardCardState, shortfall: number): CardConfig {
         borderColor: '#FFCDD2',
         buttonLabel: `あと ${shortfall}pt`,
         buttonColor: '#EF9A9A',
+        buttonShadow: 'none',
         badgeLabel: 'ポイントがたりないよ',
         badgeColor: '#EF5350',
         buttonDisabled: true,
       };
     default: {
-      // never 型による網羅性チェック（コンパイル時に未処理ステートを検知）
+      const _exhaustive: never = state;
+      throw new Error(`未知のカードステート: ${_exhaustive}`);
+    }
+  }
+}
+
+function getAliceConfig(
+  state: RewardCardState,
+  shortfall: number,
+  colors: WorldTheme['colors'],
+): CardConfig {
+  switch (state) {
+    case 'available':
+      return {
+        bgColor:        colors.primarySoft,
+        borderColor:    colors.primaryStrong,
+        buttonLabel:    'こうかんする！',
+        buttonColor:    colors.primary,
+        buttonShadow:   `0 0 8px ${colors.primaryStrong}`,
+        badgeLabel:     'こうかんできるよ',
+        badgeColor:     colors.primary,
+        buttonDisabled: false,
+      };
+    case 'pending':
+      return {
+        bgColor:        colors.cardBg,
+        borderColor:    colors.primaryStrong,
+        buttonLabel:    'しんせいちゅう',
+        buttonColor:    colors.btnPrimaryBg,
+        buttonShadow:   'none',
+        badgeLabel:     '⏳ おやのへんじまち',
+        badgeColor:     colors.btnPrimaryBg,
+        buttonDisabled: true,
+      };
+    case 'sold_out':
+      return {
+        bgColor:        colors.cardBg,
+        borderColor:    colors.cardBorder,
+        buttonLabel:    'うりきれ',
+        buttonColor:    colors.btnDisabledBg,
+        buttonShadow:   'none',
+        badgeLabel:     '😢 うりきれです',
+        badgeColor:     colors.muted,
+        buttonDisabled: true,
+      };
+    case 'insufficient':
+      return {
+        bgColor:        colors.accentSoft,
+        borderColor:    colors.accentStrong,
+        buttonLabel:    `あと ${shortfall}pt`,
+        buttonColor:    colors.accent,
+        buttonShadow:   'none',
+        badgeLabel:     'ポイントがたりないよ',
+        badgeColor:     colors.accent,
+        buttonDisabled: true,
+      };
+    default: {
       const _exhaustive: never = state;
       throw new Error(`未知のカードステート: ${_exhaustive}`);
     }
@@ -75,10 +138,14 @@ export function StoreCard({
   inFlightId,
   onRequest,
 }: StoreCardProps): JSX.Element {
-  const shortfall = Math.max(0, product.requiredPoints - walletBalance);
-  const config = getStateConfig(product.cardState, shortfall);
+  const { colors, currentThemeId } = useWorldTheme();
+  const isAliceMode = currentThemeId === 'alice';
 
-  // inFlightId が一致している間はAPIが飛んでいる（物理ロック）
+  const shortfall = Math.max(0, product.requiredPoints - walletBalance);
+  const config = isAliceMode
+    ? getAliceConfig(product.cardState, shortfall, colors)
+    : getDailyConfig(product.cardState, shortfall);
+
   const isInflight = inFlightId === product.rewardId;
   const isDisabled = config.buttonDisabled || isInflight;
 
@@ -108,7 +175,7 @@ export function StoreCard({
             margin: 0,
             fontSize: '16px',
             fontWeight: 'bold',
-            color: '#333',
+            color: isAliceMode ? colors.title : '#333',
             flex: 1,
           }}
         >
@@ -117,7 +184,7 @@ export function StoreCard({
         <span
           style={{
             backgroundColor: config.badgeColor,
-            color: 'white',
+            color: isAliceMode ? colors.bodyBg : 'white',
             fontSize: '11px',
             fontWeight: 'bold',
             padding: '3px 10px',
@@ -132,7 +199,7 @@ export function StoreCard({
 
       {/* 説明文 */}
       {product.description && (
-        <p style={{ margin: '0 0 10px', fontSize: '13px', color: '#666', lineHeight: 1.5 }}>
+        <p style={{ margin: '0 0 10px', fontSize: '13px', color: isAliceMode ? colors.subtle : '#666', lineHeight: 1.5 }}>
           {product.description}
         </p>
       )}
@@ -140,12 +207,12 @@ export function StoreCard({
       {/* フッター行: ポイント + 在庫 + ボタン */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
-          <span style={{ fontSize: '22px', fontWeight: 'bold', color: '#FF9800' }}>
+          <span style={{ fontSize: '22px', fontWeight: 'bold', color: isAliceMode ? colors.primary : '#FF9800' }}>
             {product.requiredPoints}
           </span>
-          <span style={{ fontSize: '13px', color: '#888', marginLeft: '4px' }}>ポイント</span>
+          <span style={{ fontSize: '13px', color: isAliceMode ? colors.muted : '#888', marginLeft: '4px' }}>ポイント</span>
           {product.stock !== undefined && (
-            <span style={{ fontSize: '12px', color: '#999', marginLeft: '10px' }}>
+            <span style={{ fontSize: '12px', color: isAliceMode ? colors.muted : '#999', marginLeft: '10px' }}>
               残り {product.stock} 個
             </span>
           )}
@@ -156,15 +223,18 @@ export function StoreCard({
           disabled={isDisabled}
           style={{
             padding: '9px 20px',
-            backgroundColor: isDisabled ? '#d0d0d0' : config.buttonColor,
-            color: 'white',
+            backgroundColor: isDisabled
+              ? (isAliceMode ? colors.btnDisabledBg : '#d0d0d0')
+              : config.buttonColor,
+            color: isAliceMode ? colors.bodyBg : 'white',
             border: 'none',
-            borderRadius: '22px',
+            borderRadius: isAliceMode ? '4px' : '22px',
             cursor: isDisabled ? 'not-allowed' : 'pointer',
             fontSize: '14px',
             fontWeight: 'bold',
             minWidth: '130px',
             transition: 'background-color 0.2s ease',
+            boxShadow: isAliceMode && !isDisabled ? config.buttonShadow : 'none',
           }}
         >
           {isInflight ? '⏳ つうしん中...' : config.buttonLabel}

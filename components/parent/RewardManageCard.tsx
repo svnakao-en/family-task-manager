@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { updateReward, deleteReward } from '@/lib/rewardActions';
 import { RewardData } from '@/types';
 import type { AuthContext } from '@/lib/auth/types';
+import { useWorldTheme } from '@/hooks/useWorldTheme';
 
 interface RewardManageCardProps {
   reward: RewardData;
@@ -21,6 +22,7 @@ export function RewardManageCard({
   onError,
   onSuccess,
 }: RewardManageCardProps): JSX.Element {
+  const { colors } = useWorldTheme();
   const [mode, setMode] = useState<CardMode>('view');
   const [actionState, setActionState] = useState<ActionState>('idle');
 
@@ -32,6 +34,25 @@ export function RewardManageCard({
   );
 
   const isBusy = actionState !== 'idle';
+
+  const labelStyle: React.CSSProperties = {
+    display: 'block',
+    fontSize: '12px',
+    color: colors.subtle,
+    marginBottom: '4px',
+    marginTop: '10px',
+  };
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '8px 10px',
+    border: `1px solid ${colors.cardBorder}`,
+    borderRadius: '6px',
+    fontSize: '14px',
+    boxSizing: 'border-box',
+    backgroundColor: colors.inputBg,
+    color: colors.text,
+  };
 
   const handleToggleActive = async () => {
     setActionState('toggling');
@@ -84,8 +105,8 @@ export function RewardManageCard({
   return (
     <div
       style={{
-        backgroundColor: '#fff',
-        border: '1px solid #e0e0e0',
+        backgroundColor: colors.cardBg,
+        border: `1px solid ${colors.cardBorder}`,
         borderRadius: '12px',
         padding: '16px',
         marginBottom: '12px',
@@ -97,7 +118,7 @@ export function RewardManageCard({
         <>
           {/* ヘッダー行 */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
-            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#333', flex: 1 }}>
+            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: colors.title, flex: 1 }}>
               {reward.title}
             </h3>
             <span
@@ -105,8 +126,8 @@ export function RewardManageCard({
                 fontSize: '11px',
                 padding: '2px 8px',
                 borderRadius: '10px',
-                backgroundColor: reward.isActive ? '#E8F5E9' : '#F5F5F5',
-                color: reward.isActive ? '#2E7D32' : '#9E9E9E',
+                backgroundColor: reward.isActive ? colors.successBg : colors.panelBgMuted,
+                color: reward.isActive ? colors.successText : colors.muted,
                 fontWeight: 'bold',
                 marginLeft: '8px',
                 whiteSpace: 'nowrap',
@@ -118,15 +139,15 @@ export function RewardManageCard({
 
           {/* 説明 */}
           {reward.description && (
-            <p style={{ margin: '0 0 6px', fontSize: '13px', color: '#666' }}>{reward.description}</p>
+            <p style={{ margin: '0 0 6px', fontSize: '13px', color: colors.subtle }}>{reward.description}</p>
           )}
 
           {/* ポイント・在庫 */}
           <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
-            <span style={{ fontSize: '14px', color: '#FF9800', fontWeight: 'bold' }}>
+            <span style={{ fontSize: '14px', color: colors.accent, fontWeight: 'bold' }}>
               {reward.requiredPoints.toLocaleString()} pt
             </span>
-            <span style={{ fontSize: '13px', color: '#888' }}>{stockLabel}</span>
+            <span style={{ fontSize: '13px', color: colors.muted }}>{stockLabel}</span>
           </div>
 
           {/* アクションボタン */}
@@ -137,8 +158,8 @@ export function RewardManageCard({
               style={{
                 flex: 1,
                 padding: '8px 0',
-                backgroundColor: '#E3F2FD',
-                color: '#1565C0',
+                backgroundColor: colors.panelBgMuted,
+                color: colors.link,
                 border: 'none',
                 borderRadius: '8px',
                 cursor: isBusy ? 'not-allowed' : 'pointer',
@@ -154,8 +175,8 @@ export function RewardManageCard({
               style={{
                 flex: 1,
                 padding: '8px 0',
-                backgroundColor: reward.isActive ? '#FFF8E1' : '#E8F5E9',
-                color: reward.isActive ? '#F57F17' : '#2E7D32',
+                backgroundColor: reward.isActive ? colors.warningBg : colors.successBg,
+                color: reward.isActive ? colors.warningText : colors.successText,
                 border: 'none',
                 borderRadius: '8px',
                 cursor: isBusy ? 'not-allowed' : 'pointer',
@@ -170,8 +191,8 @@ export function RewardManageCard({
               disabled={isBusy}
               style={{
                 padding: '8px 14px',
-                backgroundColor: '#FFEBEE',
-                color: '#C62828',
+                backgroundColor: colors.errorBg,
+                color: colors.errorText,
                 border: 'none',
                 borderRadius: '8px',
                 cursor: isBusy ? 'not-allowed' : 'pointer',
@@ -186,7 +207,7 @@ export function RewardManageCard({
       ) : (
         /* 編集モード */
         <>
-          <p style={{ margin: '0 0 10px', fontSize: '13px', fontWeight: 'bold', color: '#555' }}>
+          <p style={{ margin: '0 0 10px', fontSize: '13px', fontWeight: 'bold', color: colors.subtle }}>
             ✏️ 編集中
           </p>
 
@@ -236,8 +257,8 @@ export function RewardManageCard({
               style={{
                 flex: 1,
                 padding: '10px 0',
-                backgroundColor: isBusy ? '#A5D6A7' : '#4CAF50',
-                color: 'white',
+                backgroundColor: isBusy ? colors.btnDisabledBg : colors.btnSuccessBg,
+                color: isBusy ? colors.btnDisabledText : colors.btnSuccessText,
                 border: 'none',
                 borderRadius: '8px',
                 cursor: isBusy ? 'not-allowed' : 'pointer',
@@ -259,9 +280,9 @@ export function RewardManageCard({
               style={{
                 flex: 1,
                 padding: '10px 0',
-                backgroundColor: '#f5f5f5',
-                color: '#666',
-                border: '1px solid #ddd',
+                backgroundColor: colors.panelBgMuted,
+                color: colors.subtle,
+                border: `1px solid ${colors.cardBorder}`,
                 borderRadius: '8px',
                 cursor: isBusy ? 'not-allowed' : 'pointer',
                 fontSize: '14px',
@@ -275,20 +296,3 @@ export function RewardManageCard({
     </div>
   );
 }
-
-const labelStyle: React.CSSProperties = {
-  display: 'block',
-  fontSize: '12px',
-  color: '#666',
-  marginBottom: '4px',
-  marginTop: '10px',
-};
-
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '8px 10px',
-  border: '1px solid #ddd',
-  borderRadius: '6px',
-  fontSize: '14px',
-  boxSizing: 'border-box',
-};

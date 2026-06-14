@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { deleteTask } from '@/lib/taskActions';
 import { UserData } from '@/types';
+import { useWorldTheme } from '@/hooks/useWorldTheme';
 
 interface DeleteButtonProps {
   taskId: string;
@@ -19,6 +20,7 @@ export function DeleteButton({
   onSuccess,
   onError,
 }: DeleteButtonProps): JSX.Element | null {
+  const { colors } = useWorldTheme();
   const [isLoading, setIsLoading] = useState(false);
 
   // 親のみ表示
@@ -49,8 +51,8 @@ export function DeleteButton({
       aria-label="タスクを削除する"
       style={{
         padding: '8px 16px',
-        backgroundColor: isLoading ? '#ccc' : '#9E9E9E',
-        color: 'white',
+        backgroundColor: isLoading ? colors.btnDisabledBg : colors.btnDangerBg,
+        color: isLoading ? colors.btnDisabledText : colors.btnDangerText,
         border: 'none',
         borderRadius: '4px',
         cursor: isLoading ? 'not-allowed' : 'pointer',

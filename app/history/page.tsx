@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { useWorldTheme } from '@/hooks/useWorldTheme';
 import { db } from '@/lib/firebase';
 import {
   collection,
@@ -17,6 +18,8 @@ import { TaskData } from '@/types';
 export default function HistoryPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const { colors } = useWorldTheme();
+
   const [tasks, setTasks] = useState<TaskData[]>([]);
   const [isFetching, setIsFetching] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -53,7 +56,6 @@ export default function HistoryPage() {
               orderBy('approved_at', 'desc')
             );
 
-        // 親の場合のみメンバー一覧を取得（子どもは自分のレコードしか読めないため）
         if (user.role === 'parent') {
           const membersQuery = query(
             collection(db, 'family_members'),
@@ -90,7 +92,6 @@ export default function HistoryPage() {
           setTasks(historyTasks);
 
         } else {
-          // 子どもの場合: タスクのみ取得（メンバー一覧は不要）
           const taskSnapshot = await getDocs(taskQuery);
           const historyTasks: TaskData[] = taskSnapshot.docs.map((doc) =>
             buildTaskData(doc.data(), doc.id)
@@ -114,7 +115,7 @@ export default function HistoryPage() {
 
   if (loading || isFetching) {
     return (
-      <div style={{ padding: '50px', textAlign: 'center', color: '#666' }}>
+      <div style={{ padding: '50px', textAlign: 'center', color: colors.muted }}>
         読み込み中...
       </div>
     );
@@ -128,10 +129,10 @@ export default function HistoryPage() {
       maxWidth: '800px',
       margin: '0 auto',
       fontFamily: 'sans-serif',
-      color: '#333',
+      color: colors.text,
     }}>
       <header style={{
-        borderBottom: '2px solid #eee',
+        borderBottom: `2px solid ${colors.cardBorder}`,
         paddingBottom: '20px',
         marginBottom: '20px',
       }}>
@@ -141,10 +142,11 @@ export default function HistoryPage() {
             style={{
               padding: '6px 12px',
               fontSize: '14px',
-              backgroundColor: '#f5f5f5',
-              border: '1px solid #ddd',
+              backgroundColor: colors.panelBgMuted,
+              border: `1px solid ${colors.cardBorder}`,
               borderRadius: '4px',
               cursor: 'pointer',
+              color: colors.text,
             }}
           >
             ← 戻る
@@ -153,7 +155,7 @@ export default function HistoryPage() {
             {user.role === 'parent' ? '📋 承認履歴（家族全員）' : '🏆 自分の獲得履歴'}
           </h1>
         </div>
-        <p style={{ color: '#666', margin: '10px 0 0 0', fontSize: '14px' }}>
+        <p style={{ color: colors.subtle, margin: '10px 0 0 0', fontSize: '14px' }}>
           ログイン中: {user.email}
         </p>
       </header>
@@ -161,8 +163,8 @@ export default function HistoryPage() {
       {error && (
         <div style={{
           padding: '12px 16px',
-          backgroundColor: '#ffebee',
-          color: '#c62828',
+          backgroundColor: colors.errorBg,
+          color: colors.errorText,
           borderRadius: '6px',
           marginBottom: '20px',
           fontSize: '14px',
@@ -175,7 +177,7 @@ export default function HistoryPage() {
         <div style={{
           textAlign: 'center',
           padding: '60px 20px',
-          color: '#999',
+          color: colors.muted,
           fontSize: '16px',
         }}>
           {user.role === 'parent'
@@ -190,9 +192,9 @@ export default function HistoryPage() {
               style={{
                 padding: '16px',
                 marginBottom: '12px',
-                backgroundColor: '#f9f9f9',
+                backgroundColor: colors.cardBg,
                 borderRadius: '8px',
-                border: '1px solid #eee',
+                border: `1px solid ${colors.cardBorder}`,
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
@@ -204,13 +206,13 @@ export default function HistoryPage() {
                 <p style={{ margin: '0 0 4px 0', fontWeight: 'bold', fontSize: '16px' }}>
                   {task.title}
                 </p>
-                <p style={{ margin: 0, fontSize: '12px', color: '#999' }}>
+                <p style={{ margin: 0, fontSize: '12px', color: colors.muted }}>
                   承認日: {task.approvedAt
                     ? task.approvedAt.toLocaleDateString('ja-JP')
                     : '不明'}
                 </p>
                 {user.role === 'parent' && task.assignedTo && (
-                  <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#999' }}>
+                  <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: colors.muted }}>
                     担当: {userNameMap.get(task.assignedTo) ?? task.assignedTo}
                   </p>
                 )}
@@ -218,8 +220,8 @@ export default function HistoryPage() {
 
               <div style={{
                 padding: '6px 14px',
-                backgroundColor: '#d4edda',
-                color: '#155724',
+                backgroundColor: colors.successBg,
+                color: colors.successText,
                 borderRadius: '50px',
                 fontWeight: 'bold',
                 fontSize: '16px',
@@ -236,17 +238,17 @@ export default function HistoryPage() {
         <div style={{
           marginTop: '24px',
           padding: '16px 20px',
-          backgroundColor: '#fff3cd',
-          border: '1px solid #ffc107',
+          backgroundColor: colors.warningBg,
+          border: `1px solid ${colors.cardBorder}`,
           borderRadius: '8px',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
         }}>
-          <span style={{ fontWeight: 'bold', color: '#856404' }}>
+          <span style={{ fontWeight: 'bold', color: colors.warningText }}>
             獲得ポイント合計
           </span>
-          <span style={{ fontSize: '22px', fontWeight: 'bold', color: '#856404' }}>
+          <span style={{ fontSize: '22px', fontWeight: 'bold', color: colors.warningText }}>
             {tasks.reduce((sum, t) => sum + t.rewardPoints, 0)} pt
           </span>
         </div>
@@ -255,9 +257,9 @@ export default function HistoryPage() {
       <footer style={{
         marginTop: '40px',
         paddingTop: '20px',
-        borderTop: '1px solid #eee',
+        borderTop: `1px solid ${colors.cardBorder}`,
         fontSize: '12px',
-        color: '#ccc',
+        color: colors.muted,
         textAlign: 'center',
       }}>
         Family Reward App — Built by Claude (sub for Bob)

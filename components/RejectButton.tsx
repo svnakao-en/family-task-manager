@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { rejectTask } from '@/lib/taskActions';
 import { UserData } from '@/types';
+import { useWorldTheme } from '@/hooks/useWorldTheme';
 
 interface RejectButtonProps {
   taskId: string;
@@ -19,6 +20,7 @@ export function RejectButton({
   onSuccess,
   onError,
 }: RejectButtonProps): JSX.Element | null {
+  const { colors } = useWorldTheme();
   const [isLoading, setIsLoading] = useState(false);
 
   // 親のみ表示
@@ -49,8 +51,8 @@ export function RejectButton({
       aria-label="タスクを差し戻す"
       style={{
         padding: '8px 16px',
-        backgroundColor: isLoading ? '#ccc' : '#FF5722',
-        color: 'white',
+        backgroundColor: isLoading ? colors.btnDisabledBg : colors.btnDangerBg,
+        color: isLoading ? colors.btnDisabledText : colors.btnDangerText,
         border: 'none',
         borderRadius: '4px',
         cursor: isLoading ? 'not-allowed' : 'pointer',

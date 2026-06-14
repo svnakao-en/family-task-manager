@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { startTask } from '@/lib/taskActions';
 import { UserData } from '@/types';
+import { useWorldTheme } from '@/hooks/useWorldTheme';
 
 interface StartButtonProps {
   taskId: string;
@@ -21,6 +22,7 @@ export function StartButton({
   onSuccess,
   onError,
 }: StartButtonProps): JSX.Element | null {
+  const { colors } = useWorldTheme();
   const [isLoading, setIsLoading] = useState(false);
 
   // 子供のみ表示
@@ -53,8 +55,8 @@ export function StartButton({
       aria-label="タスクを開始する"
       style={{
         padding: '8px 16px',
-        backgroundColor: isLoading ? '#ccc' : '#2196F3',
-        color: 'white',
+        backgroundColor: isLoading ? colors.btnDisabledBg : colors.btnPrimaryBg,
+        color: isLoading ? colors.btnDisabledText : colors.btnPrimaryText,
         border: 'none',
         borderRadius: '4px',
         cursor: isLoading ? 'not-allowed' : 'pointer',

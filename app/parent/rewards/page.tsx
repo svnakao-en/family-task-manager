@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
+import { useWorldTheme } from '@/hooks/useWorldTheme';
 import { useParentRewards } from '@/hooks/useParentRewards';
 import { createReward } from '@/lib/rewardActions';
 import { getCurrentParent } from '@/lib/auth/getCurrentParent';
@@ -13,6 +14,7 @@ import { Toast } from '@/components/Toast';
 export default function ParentRewardsPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const { colors } = useWorldTheme();
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   // 作成フォーム
@@ -29,7 +31,7 @@ export default function ParentRewardsPage() {
 
   if (loading) {
     return (
-      <div style={{ textAlign: 'center', padding: '40px', color: '#888' }}>
+      <div style={{ textAlign: 'center', padding: '40px', color: colors.muted }}>
         読み込み中...
       </div>
     );
@@ -41,6 +43,25 @@ export default function ParentRewardsPage() {
   }
 
   const auth = getCurrentParent(user);
+
+  const labelStyle: React.CSSProperties = {
+    display: 'block',
+    fontSize: '12px',
+    color: colors.subtle,
+    marginBottom: '4px',
+    marginTop: '10px',
+  };
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '8px 10px',
+    border: `1px solid ${colors.cardBorder}`,
+    borderRadius: '6px',
+    fontSize: '14px',
+    boxSizing: 'border-box',
+    backgroundColor: colors.inputBg,
+    color: colors.text,
+  };
 
   const resetForm = () => {
     setFormTitle('');
@@ -96,10 +117,10 @@ export default function ParentRewardsPage() {
 
       {/* ヘッダー */}
       <div style={{ marginBottom: '20px' }}>
-        <h1 style={{ margin: 0, fontSize: '22px', fontWeight: 'bold', color: '#333' }}>
+        <h1 style={{ margin: 0, fontSize: '22px', fontWeight: 'bold', color: colors.title }}>
           🎁 ご褒美管理
         </h1>
-        <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#888' }}>
+        <p style={{ margin: '4px 0 0', fontSize: '13px', color: colors.subtle }}>
           子供が交換できるご褒美を管理できます
         </p>
       </div>
@@ -110,12 +131,12 @@ export default function ParentRewardsPage() {
           onClick={() => router.back()}
           style={{
             padding: '6px 14px',
-            backgroundColor: '#f5f5f5',
-            border: '1px solid #ddd',
+            backgroundColor: colors.panelBgMuted,
+            border: `1px solid ${colors.cardBorder}`,
             borderRadius: '6px',
             cursor: 'pointer',
             fontSize: '13px',
-            color: '#666',
+            color: colors.subtle,
           }}
         >
           ← もどる
@@ -124,8 +145,8 @@ export default function ParentRewardsPage() {
           href="/store/requests"
           style={{
             padding: '8px 16px',
-            backgroundColor: '#28a745',
-            color: '#ffffff',
+            backgroundColor: colors.btnSuccessBg,
+            color: colors.btnSuccessText,
             borderRadius: '8px',
             textDecoration: 'none',
             fontSize: '13px',
@@ -143,8 +164,8 @@ export default function ParentRewardsPage() {
           style={{
             width: '100%',
             padding: '12px',
-            backgroundColor: '#4CAF50',
-            color: 'white',
+            backgroundColor: colors.btnSuccessBg,
+            color: colors.btnSuccessText,
             border: 'none',
             borderRadius: '10px',
             cursor: 'pointer',
@@ -158,14 +179,14 @@ export default function ParentRewardsPage() {
       ) : (
         <div
           style={{
-            backgroundColor: '#F1F8E9',
-            border: '1px solid #AED581',
+            backgroundColor: colors.panelBgMuted,
+            border: `1px solid ${colors.cardBorder}`,
             borderRadius: '12px',
             padding: '16px',
             marginBottom: '20px',
           }}
         >
-          <p style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: 'bold', color: '#33691E' }}>
+          <p style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: 'bold', color: colors.successText }}>
             ＋ 新しいご褒美
           </p>
 
@@ -219,8 +240,8 @@ export default function ParentRewardsPage() {
               style={{
                 flex: 1,
                 padding: '10px 0',
-                backgroundColor: isCreating ? '#A5D6A7' : '#4CAF50',
-                color: 'white',
+                backgroundColor: isCreating ? colors.btnDisabledBg : colors.btnSuccessBg,
+                color: isCreating ? colors.btnDisabledText : colors.btnSuccessText,
                 border: 'none',
                 borderRadius: '8px',
                 cursor: isCreating ? 'not-allowed' : 'pointer',
@@ -236,9 +257,9 @@ export default function ParentRewardsPage() {
               style={{
                 flex: 1,
                 padding: '10px 0',
-                backgroundColor: '#f5f5f5',
-                color: '#666',
-                border: '1px solid #ddd',
+                backgroundColor: colors.panelBgMuted,
+                color: colors.subtle,
+                border: `1px solid ${colors.cardBorder}`,
                 borderRadius: '8px',
                 cursor: isCreating ? 'not-allowed' : 'pointer',
                 fontSize: '14px',
@@ -254,13 +275,13 @@ export default function ParentRewardsPage() {
       {error && (
         <div
           style={{
-            backgroundColor: '#fff3cd',
-            border: '1px solid #ffc107',
+            backgroundColor: colors.warningBg,
+            border: `1px solid ${colors.cardBorder}`,
             borderRadius: '8px',
             padding: '10px 14px',
             marginBottom: '16px',
             fontSize: '13px',
-            color: '#856404',
+            color: colors.warningText,
           }}
         >
           ご褒美一覧の読み込みに失敗しました。画面を再読み込みしてください。
@@ -269,7 +290,7 @@ export default function ParentRewardsPage() {
 
       {/* ローディング */}
       {!isReady && (
-        <div style={{ textAlign: 'center', padding: '40px', color: '#aaa' }}>
+        <div style={{ textAlign: 'center', padding: '40px', color: colors.muted }}>
           読み込み中...
         </div>
       )}
@@ -280,7 +301,7 @@ export default function ParentRewardsPage() {
           style={{
             textAlign: 'center',
             padding: '48px 16px',
-            color: '#aaa',
+            color: colors.muted,
             fontSize: '15px',
           }}
         >
@@ -301,21 +322,3 @@ export default function ParentRewardsPage() {
     </div>
   );
 }
-
-const labelStyle: React.CSSProperties = {
-  display: 'block',
-  fontSize: '12px',
-  color: '#555',
-  marginBottom: '4px',
-  marginTop: '10px',
-};
-
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '8px 10px',
-  border: '1px solid #C5E1A5',
-  borderRadius: '6px',
-  fontSize: '14px',
-  boxSizing: 'border-box',
-  backgroundColor: '#fff',
-};

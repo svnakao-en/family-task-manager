@@ -5,6 +5,7 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { editTask } from '@/lib/taskActions';
 import { TaskData, UserData } from '@/types';
+import { useWorldTheme } from '@/hooks/useWorldTheme';
 
 interface EditTaskFormProps {
   task: TaskData;
@@ -26,6 +27,7 @@ export function EditTaskForm({
   onCancel,
   onError,
 }: EditTaskFormProps): JSX.Element {
+  const { colors } = useWorldTheme();
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description ?? '');
   const [rewardPoints, setRewardPoints] = useState(String(task.rewardPoints));
@@ -90,21 +92,32 @@ export function EditTaskForm({
     }
   };
 
+  const fieldStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '6px 8px',
+    fontSize: '14px',
+    border: `1px solid ${colors.cardBorder}`,
+    borderRadius: '4px',
+    boxSizing: 'border-box',
+    backgroundColor: colors.inputBg,
+    color: colors.text,
+  };
+
   return (
     <form
       onSubmit={handleSubmit}
       style={{
         marginTop: '12px',
         padding: '12px',
-        backgroundColor: '#fff',
-        border: '1px solid #ccc',
+        backgroundColor: colors.cardBg,
+        border: `1px solid ${colors.cardBorder}`,
         borderRadius: '6px',
       }}
     >
       {/* タスク名 */}
       <div style={{ marginBottom: '10px' }}>
-        <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', fontWeight: 'bold' }}>
-          タスク名 <span style={{ color: 'red' }}>*</span>
+        <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', fontWeight: 'bold', color: colors.text }}>
+          タスク名 <span style={{ color: colors.errorText }}>*</span>
         </label>
         <input
           type="text"
@@ -112,20 +125,13 @@ export function EditTaskForm({
           onChange={(e) => setTitle(e.target.value)}
           disabled={isLoading}
           required
-          style={{
-            width: '100%',
-            padding: '6px 8px',
-            fontSize: '14px',
-            border: '1px solid #ccc',
-            borderRadius: '4px',
-            boxSizing: 'border-box',
-          }}
+          style={fieldStyle}
         />
       </div>
 
       {/* 説明 */}
       <div style={{ marginBottom: '10px' }}>
-        <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', fontWeight: 'bold' }}>
+        <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', fontWeight: 'bold', color: colors.text }}>
           説明（任意）
         </label>
         <textarea
@@ -133,22 +139,14 @@ export function EditTaskForm({
           onChange={(e) => setDescription(e.target.value)}
           disabled={isLoading}
           rows={2}
-          style={{
-            width: '100%',
-            padding: '6px 8px',
-            fontSize: '14px',
-            border: '1px solid #ccc',
-            borderRadius: '4px',
-            boxSizing: 'border-box',
-            resize: 'vertical',
-          }}
+          style={{ ...fieldStyle, resize: 'vertical' }}
         />
       </div>
 
       {/* 報酬ポイント */}
       <div style={{ marginBottom: '10px' }}>
-        <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', fontWeight: 'bold' }}>
-          報酬ポイント <span style={{ color: 'red' }}>*</span>
+        <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', fontWeight: 'bold', color: colors.text }}>
+          報酬ポイント <span style={{ color: colors.errorText }}>*</span>
         </label>
         <input
           type="number"
@@ -158,36 +156,21 @@ export function EditTaskForm({
           min="1"
           step="1"
           required
-          style={{
-            width: '100%',
-            padding: '6px 8px',
-            fontSize: '14px',
-            border: '1px solid #ccc',
-            borderRadius: '4px',
-            boxSizing: 'border-box',
-          }}
+          style={fieldStyle}
         />
       </div>
 
       {/* 担当者（任意） */}
       {children.length > 0 && (
         <div style={{ marginBottom: '12px' }}>
-          <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', fontWeight: 'bold' }}>
+          <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', fontWeight: 'bold', color: colors.text }}>
             担当者（任意）
           </label>
           <select
             value={assignedTo}
             onChange={(e) => setAssignedTo(e.target.value)}
             disabled={isLoading}
-            style={{
-              width: '100%',
-              padding: '6px 8px',
-              fontSize: '14px',
-              border: '1px solid #ccc',
-              borderRadius: '4px',
-              boxSizing: 'border-box',
-              backgroundColor: 'white',
-            }}
+            style={fieldStyle}
           >
             <option value="">指名なし（先着順）</option>
             {children.map((child) => (
@@ -206,8 +189,8 @@ export function EditTaskForm({
           disabled={isLoading}
           style={{
             padding: '8px 16px',
-            backgroundColor: isLoading ? '#ccc' : '#2196F3',
-            color: 'white',
+            backgroundColor: isLoading ? colors.btnDisabledBg : colors.btnPrimaryBg,
+            color: isLoading ? colors.btnDisabledText : colors.btnPrimaryText,
             border: 'none',
             borderRadius: '4px',
             cursor: isLoading ? 'not-allowed' : 'pointer',
@@ -223,9 +206,9 @@ export function EditTaskForm({
           disabled={isLoading}
           style={{
             padding: '8px 16px',
-            backgroundColor: '#fff',
-            color: '#555',
-            border: '1px solid #ccc',
+            backgroundColor: colors.panelBgMuted,
+            color: colors.subtle,
+            border: `1px solid ${colors.cardBorder}`,
             borderRadius: '4px',
             cursor: isLoading ? 'not-allowed' : 'pointer',
             fontSize: '14px',

@@ -4,7 +4,17 @@
  */
 
 import { Timestamp } from 'firebase/firestore';
-import { TaskData, FirestoreTaskDocument } from '@/types';
+import { TaskData, TaskCategory, FirestoreTaskDocument } from '@/types';
+
+// ─── TaskCategory 型ガード（Firestore読み込み時の安全な復元用） ─────────────
+// テーマ層に依存せず、types/index.ts の TaskCategory を唯一の真実として検証する。
+const VALID_TASK_CATEGORIES: ReadonlySet<string> = new Set<TaskCategory>([
+  'exercise', 'study', 'housework', 'help', 'life',
+]);
+
+function isValidCategory(cat: unknown): cat is TaskCategory {
+  return typeof cat === 'string' && VALID_TASK_CATEGORIES.has(cat);
+}
 
 /**
  * FirestoreのタスクドキュメントをTaskDataに変換
@@ -47,6 +57,7 @@ export function buildTaskData(firestoreData: any, docId: string): TaskData {
     status: data.status || 'pending',
     createdBy: data.created_by,
     createdAt: convertTimestamp(data.created_at),
+    ...(isValidCategory(data.category) ? { category: data.category } : {}),
   };
 
   // オプショナルフィールドの追加（存在確認を徹底）
@@ -84,6 +95,7 @@ export function taskDataToFirestore(taskData: Partial<TaskData>): Partial<Firest
   if (taskData.description !== undefined) firestoreData.description = taskData.description;
   if (taskData.rewardPoints !== undefined) firestoreData.reward_points = taskData.rewardPoints;
   if (taskData.status !== undefined) firestoreData.status = taskData.status;
+  if (taskData.category !== undefined) firestoreData.category = taskData.category;
   if (taskData.assignedTo !== undefined) firestoreData.assigned_to = taskData.assignedTo;
   if (taskData.createdBy !== undefined) firestoreData.created_by = taskData.createdBy;
 

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { useWorldTheme } from '@/hooks/useWorldTheme';
 import { useApprovalQueue } from '@/hooks/useApprovalQueue';
 import { ApprovalCard } from '@/components/parent/ApprovalCard';
 import { Toast } from '@/components/Toast';
@@ -10,6 +11,8 @@ import { Toast } from '@/components/Toast';
 export default function StoreRequestsPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const { colors } = useWorldTheme();
+
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const { queue, isReady, error } = useApprovalQueue(
@@ -18,7 +21,7 @@ export default function StoreRequestsPage() {
 
   if (loading) {
     return (
-      <div style={{ textAlign: 'center', padding: '40px', color: '#888' }}>
+      <div style={{ textAlign: 'center', padding: '40px', color: colors.muted }}>
         読み込み中...
       </div>
     );
@@ -41,10 +44,10 @@ export default function StoreRequestsPage() {
 
       {/* ヘッダー */}
       <div style={{ marginBottom: '20px' }}>
-        <h1 style={{ margin: 0, fontSize: '22px', fontWeight: 'bold', color: '#333' }}>
+        <h1 style={{ margin: 0, fontSize: '22px', fontWeight: 'bold', color: colors.title }}>
           📬 こうかん申請
         </h1>
-        <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#888' }}>
+        <p style={{ margin: '4px 0 0', fontSize: '13px', color: colors.subtle }}>
           子供からの申請を承認または却下できます（古い順に表示）
         </p>
       </div>
@@ -55,12 +58,12 @@ export default function StoreRequestsPage() {
         style={{
           marginBottom: '16px',
           padding: '6px 14px',
-          backgroundColor: '#f5f5f5',
-          border: '1px solid #ddd',
+          backgroundColor: colors.panelBgMuted,
+          border: `1px solid ${colors.cardBorder}`,
           borderRadius: '6px',
           cursor: 'pointer',
           fontSize: '13px',
-          color: '#666',
+          color: colors.subtle,
         }}
       >
         ← もどる
@@ -70,13 +73,13 @@ export default function StoreRequestsPage() {
       {error && (
         <div
           style={{
-            backgroundColor: '#fff3cd',
-            border: '1px solid #ffc107',
+            backgroundColor: colors.warningBg,
+            border: `1px solid ${colors.cardBorder}`,
             borderRadius: '8px',
             padding: '10px 14px',
             marginBottom: '16px',
             fontSize: '13px',
-            color: '#856404',
+            color: colors.warningText,
           }}
         >
           申請一覧の読み込みに失敗しました。画面を再読み込みしてください。
@@ -85,7 +88,7 @@ export default function StoreRequestsPage() {
 
       {/* ローディング */}
       {!isReady && (
-        <div style={{ textAlign: 'center', padding: '40px', color: '#aaa' }}>
+        <div style={{ textAlign: 'center', padding: '40px', color: colors.muted }}>
           申請を読み込み中...
         </div>
       )}
@@ -96,7 +99,7 @@ export default function StoreRequestsPage() {
           style={{
             textAlign: 'center',
             padding: '48px 16px',
-            color: '#aaa',
+            color: colors.muted,
             fontSize: '15px',
           }}
         >

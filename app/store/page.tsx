@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { useWorldTheme } from '@/hooks/useWorldTheme';
 import { useStoreProducts } from '@/hooks/useStoreProducts';
 import { createExchange } from '@/lib/storeActions';
 import { StoreCard } from '@/components/store/StoreCard';
@@ -11,8 +12,15 @@ import { Toast } from '@/components/Toast';
 export default function StorePage() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const { colors, currentThemeId } = useWorldTheme();
+  const isAliceMode = currentThemeId === 'alice';
 
+  const [mounted, setMounted] = useState(false);
   const [inFlightId, setInFlightId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const { products, walletBalance, isReady, error } = useStoreProducts(
@@ -21,7 +29,7 @@ export default function StorePage() {
 
   if (loading) {
     return (
-      <div style={{ textAlign: 'center', padding: '40px', color: '#888' }}>
+      <div style={{ textAlign: 'center', padding: '40px', color: colors.muted }}>
         読み込み中...
       </div>
     );
@@ -30,6 +38,10 @@ export default function StorePage() {
   if (!user || user.role !== 'child') {
     router.replace('/');
     return null;
+  }
+
+  if (!mounted) {
+    return <div style={{ maxWidth: '480px', margin: '0 auto', padding: '16px', minHeight: '100vh' }} />;
   }
 
   const handleRequest = async (rewardId: string) => {
@@ -66,26 +78,27 @@ export default function StorePage() {
         }}
       >
         <div>
-          <h1 style={{ margin: 0, fontSize: '22px', fontWeight: 'bold', color: '#333' }}>
+          <h1 style={{ margin: 0, fontSize: '22px', fontWeight: 'bold', color: isAliceMode ? colors.title : '#333' }}>
             🎁 ご褒美ストア
           </h1>
-          <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#888' }}>
+          <p style={{ margin: '4px 0 0', fontSize: '13px', color: isAliceMode ? colors.subtle : '#888' }}>
             ためたポイントでこうかんしよう！
           </p>
         </div>
         <div
           style={{
-            backgroundColor: '#FFF9C4',
-            border: '2px solid #FFD54F',
+            backgroundColor: isAliceMode ? colors.primarySoft : '#FFF9C4',
+            border: isAliceMode ? `1px solid ${colors.primary}` : '2px solid #FFD54F',
             borderRadius: '12px',
             padding: '8px 14px',
             textAlign: 'center',
+            boxShadow: isAliceMode ? `0 0 10px ${colors.primaryStrong}` : 'none',
           }}
         >
-          <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#F57F17' }}>
+          <div style={{ fontSize: '20px', fontWeight: 'bold', color: isAliceMode ? colors.primary : '#F57F17' }}>
             {walletBalance}
           </div>
-          <div style={{ fontSize: '11px', color: '#F57F17' }}>ポイント</div>
+          <div style={{ fontSize: '11px', color: isAliceMode ? colors.primary : '#F57F17' }}>ポイント</div>
         </div>
       </div>
 
@@ -95,12 +108,12 @@ export default function StorePage() {
         style={{
           marginBottom: '16px',
           padding: '6px 14px',
-          backgroundColor: '#f5f5f5',
-          border: '1px solid #ddd',
+          backgroundColor: isAliceMode ? 'transparent' : '#f5f5f5',
+          border: isAliceMode ? `1px solid ${colors.cardBorder}` : '1px solid #ddd',
           borderRadius: '6px',
           cursor: 'pointer',
           fontSize: '13px',
-          color: '#666',
+          color: isAliceMode ? colors.text : '#666',
         }}
       >
         ← もどる
@@ -110,13 +123,13 @@ export default function StorePage() {
       {error && (
         <div
           style={{
-            backgroundColor: '#fff3cd',
-            border: '1px solid #ffc107',
+            backgroundColor: colors.warningBg,
+            border: `1px solid ${colors.cardBorder}`,
             borderRadius: '8px',
             padding: '10px 14px',
             marginBottom: '16px',
             fontSize: '13px',
-            color: '#856404',
+            color: colors.warningText,
           }}
         >
           電波のいいところで、もういちどためしてね
@@ -128,7 +141,7 @@ export default function StorePage() {
 
       {/* ローディング */}
       {!isReady && (
-        <div style={{ textAlign: 'center', padding: '40px', color: '#aaa' }}>
+        <div style={{ textAlign: 'center', padding: '40px', color: colors.muted }}>
           ご褒美を読み込み中...
         </div>
       )}
@@ -139,7 +152,7 @@ export default function StorePage() {
           style={{
             textAlign: 'center',
             padding: '48px 16px',
-            color: '#aaa',
+            color: colors.muted,
             fontSize: '15px',
           }}
         >

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { approveTask } from '@/lib/taskActions';
 import { UserData } from '@/types';
+import { useWorldTheme } from '@/hooks/useWorldTheme';
 
 /**
  * ApproveButton コンポーネントのProps
@@ -34,6 +35,7 @@ export function ApproveButton({
   onSuccess,
   onError,
 }: ApproveButtonProps): JSX.Element | null {
+  const { colors } = useWorldTheme();
   const [isLoading, setIsLoading] = useState(false);
 
   // ガード1: 親以外にボタンを見せない（憲法）
@@ -46,24 +48,22 @@ export function ApproveButton({
   const isApproved = taskStatus === 'approved';
   const isCompleted = taskStatus === 'completed';
 
+  const disabledStyle: React.CSSProperties = {
+    padding: '8px 16px',
+    backgroundColor: colors.btnDisabledBg,
+    color: colors.btnDisabledText,
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'not-allowed',
+    fontSize: '14px',
+    fontWeight: 'bold',
+  };
+
   // 修正②: 「消えるボタン」から「説明するUI」へ
   // 担当者が未設定の場合は、ボタンを消すのではなく理由を明示
   if (!assignedTo) {
     return (
-      <button
-        disabled
-        aria-label="担当者が未設定のため承認できません"
-        style={{
-          padding: '8px 16px',
-          backgroundColor: '#e0e0e0',
-          color: '#757575',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'not-allowed',
-          fontSize: '14px',
-          fontWeight: 'bold',
-        }}
-      >
+      <button disabled aria-label="担当者が未設定のため承認できません" style={disabledStyle}>
         担当者が未設定です
       </button>
     );
@@ -72,20 +72,7 @@ export function ApproveButton({
   // 既に承認済みの場合は、ボタンを消すのではなく状態を明示
   if (isApproved) {
     return (
-      <button
-        disabled
-        aria-label="承認済み"
-        style={{
-          padding: '8px 16px',
-          backgroundColor: '#e0e0e0',
-          color: '#757575',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'not-allowed',
-          fontSize: '14px',
-          fontWeight: 'bold',
-        }}
-      >
+      <button disabled aria-label="承認済み" style={disabledStyle}>
         承認済み
       </button>
     );
@@ -115,7 +102,7 @@ export function ApproveButton({
     } catch (error) {
       // 失敗時: エラーメッセージをそのまま表示（具体的かつ親切）
       const errorMessage = error instanceof Error ? error.message : 'タスクの承認に失敗しました';
-      
+
       if (onError) {
         onError(errorMessage);
       } else {
@@ -137,8 +124,8 @@ export function ApproveButton({
       aria-label={`タスクを承認して${rewardPoints}ポイントを付与`}
       style={{
         padding: '8px 16px',
-        backgroundColor: isLoading ? '#ccc' : '#4CAF50',
-        color: 'white',
+        backgroundColor: isLoading ? colors.btnDisabledBg : colors.btnSuccessBg,
+        color: isLoading ? colors.btnDisabledText : colors.btnSuccessText,
         border: 'none',
         borderRadius: '4px',
         cursor: isLoading ? 'not-allowed' : 'pointer',

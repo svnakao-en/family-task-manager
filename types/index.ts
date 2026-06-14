@@ -53,6 +53,11 @@ export interface UseAuthReturn {
 }
 
 /**
+ * タスクのカテゴリー型（世界観から独立したドメイン属性）
+ */
+export type TaskCategory = 'exercise' | 'study' | 'housework' | 'help' | 'life';
+
+/**
  * タスクデータ型（フロントエンド用・camelCase）
  */
 export interface TaskData {
@@ -62,6 +67,7 @@ export interface TaskData {
   description?: string;
   rewardPoints: number;
   status: 'pending' | 'working' | 'completed' | 'approved'; // working 追加
+  category?: TaskCategory;
   assignedTo?: string;
   createdBy: string;
   createdAt: Date;
@@ -79,6 +85,7 @@ export interface FirestoreTaskDocument {
   description?: string;
   reward_points: number;
   status: 'pending' | 'working' | 'completed' | 'approved'; // working 追加
+  category?: TaskCategory;
   assigned_to?: string;
   created_by: string;
   created_at: any; // Firestore Timestamp

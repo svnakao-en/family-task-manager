@@ -6,6 +6,7 @@ import { db } from '@/lib/firebase';
 import { UserData, TaskData } from '@/types';
 import { buildTaskData } from '@/lib/taskUtils';
 import { EmptyState } from './EmptyState';
+import { useWorldTheme } from '@/hooks/useWorldTheme';
 
 /**
  * TaskList コンポーネントのProps
@@ -31,6 +32,7 @@ export function TaskList({
   renderTask,
   onTasksLoaded, // ← これを追加！
 }: TaskListProps): JSX.Element {
+  const { colors } = useWorldTheme();
   const [tasks, setTasks] = useState<TaskData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -132,8 +134,8 @@ export function TaskList({
   // familyId が存在しない場合
   if (!currentUser.familyId) {
     return (
-      <div style={{ padding: '16px', backgroundColor: '#fff3cd', borderRadius: '4px' }}>
-        <p style={{ margin: 0, color: '#856404' }}>
+      <div style={{ padding: '16px', backgroundColor: colors.warningBg, borderRadius: '4px' }}>
+        <p style={{ margin: 0, color: colors.warningText }}>
           家族IDが設定されていません。役割選択画面から家族を作成または参加してください。
         </p>
       </div>

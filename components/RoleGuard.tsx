@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { useWorldTheme } from '@/hooks/useWorldTheme';
 
 /**
  * 役割ガードコンポーネント
@@ -13,6 +14,7 @@ export function RoleGuard({ children }: { children: React.ReactNode }): JSX.Elem
   const { user, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const { colors } = useWorldTheme();
   const [isRedirecting, setIsRedirecting] = useState(false);
 
   useEffect(() => {
@@ -45,7 +47,7 @@ export function RoleGuard({ children }: { children: React.ReactNode }): JSX.Elem
         alignItems: 'center',
         height: '100vh',
         fontSize: '18px',
-        color: '#666'
+        color: colors.muted
       }}>
         読み込み中...
       </div>
@@ -61,7 +63,7 @@ export function RoleGuard({ children }: { children: React.ReactNode }): JSX.Elem
         alignItems: 'center',
         height: '100vh',
         fontSize: '18px',
-        color: '#666'
+        color: colors.muted
       }}>
         リダイレクト中...
       </div>

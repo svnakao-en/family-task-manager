@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { completeTask } from '@/lib/taskActions';
 import { UserData } from '@/types';
+import { useWorldTheme } from '@/hooks/useWorldTheme';
 
 interface CompleteButtonProps {
   taskId: string;
@@ -21,6 +22,7 @@ export function CompleteButton({
   onSuccess,
   onError,
 }: CompleteButtonProps): JSX.Element | null {
+  const { colors } = useWorldTheme();
   const [isLoading, setIsLoading] = useState(false);
 
   // 子供以外には表示しない
@@ -30,23 +32,21 @@ export function CompleteButton({
   const isCompleted = taskStatus === 'completed';
   const isApproved  = taskStatus === 'approved';
 
+  const disabledStyle: React.CSSProperties = {
+    padding: '8px 16px',
+    backgroundColor: colors.btnDisabledBg,
+    color: colors.btnDisabledText,
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'not-allowed',
+    fontSize: '14px',
+    fontWeight: 'bold',
+  };
+
   // 担当者が自分でない場合は理由を明示
   if (assignedTo && assignedTo !== currentUser.userId) {
     return (
-      <button
-        disabled
-        aria-label="他の人に割り当てられているため完了報告できません"
-        style={{
-          padding: '8px 16px',
-          backgroundColor: '#e0e0e0',
-          color: '#757575',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'not-allowed',
-          fontSize: '14px',
-          fontWeight: 'bold',
-        }}
-      >
+      <button disabled aria-label="他の人に割り当てられているため完了報告できません" style={disabledStyle}>
         担当外です
       </button>
     );
@@ -58,20 +58,7 @@ export function CompleteButton({
   // 完了報告済み
   if (isCompleted) {
     return (
-      <button
-        disabled
-        aria-label="完了報告済み（親の承認待ち）"
-        style={{
-          padding: '8px 16px',
-          backgroundColor: '#e0e0e0',
-          color: '#757575',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'not-allowed',
-          fontSize: '14px',
-          fontWeight: 'bold',
-        }}
-      >
+      <button disabled aria-label="完了報告済み（親の承認待ち）" style={disabledStyle}>
         承認待ち
       </button>
     );
@@ -80,20 +67,7 @@ export function CompleteButton({
   // 承認済み
   if (isApproved) {
     return (
-      <button
-        disabled
-        aria-label="承認済み"
-        style={{
-          padding: '8px 16px',
-          backgroundColor: '#e0e0e0',
-          color: '#757575',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'not-allowed',
-          fontSize: '14px',
-          fontWeight: 'bold',
-        }}
-      >
+      <button disabled aria-label="承認済み" style={disabledStyle}>
         承認済み
       </button>
     );
@@ -123,8 +97,8 @@ export function CompleteButton({
       aria-label="タスクを完了報告する"
       style={{
         padding: '8px 16px',
-        backgroundColor: isLoading ? '#ccc' : '#4CAF50',
-        color: 'white',
+        backgroundColor: isLoading ? colors.btnDisabledBg : colors.btnSuccessBg,
+        color: isLoading ? colors.btnDisabledText : colors.btnSuccessText,
         border: 'none',
         borderRadius: '4px',
         cursor: isLoading ? 'not-allowed' : 'pointer',

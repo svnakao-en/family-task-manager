@@ -158,7 +158,7 @@ export function useStoreProducts(childUser: UserData): UseStoreProductsResult {
       title: reward.title,
       description: reward.description,
       requiredPoints: reward.requiredPoints,
-      stock: reward.stock ?? undefined, // null（無限在庫）は undefined に統一
+      stock: reward.stock != null ? reward.stock : undefined,
       cardState,
       pendingExchangeId,
     };
